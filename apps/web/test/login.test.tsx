@@ -79,8 +79,10 @@ describe("Login page", () => {
         <LoginPage />
       </AuthProvider>,
     );
-    expect((await screen.findByText("Creative")).textContent).toBe("Creative");
-    expect(screen.getByText(/Send login link/i).textContent).toContain("Send login link");
+    expect((await screen.findByText(/Creative/)).textContent).toContain("Creative");
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /use login link instead/i })).toBeInTheDocument();
     expect(screen.getByText(/Continue with Google/i).textContent).toContain("Continue with Google");
     expect(screen.getByRole("link", { name: /create one/i }).getAttribute("href")).toBe("/register");
   });
@@ -106,7 +108,8 @@ describe("Login page", () => {
       </AuthProvider>,
     );
 
-    fireEvent.change(await screen.findByLabelText(/email/i), {
+    fireEvent.click(await screen.findByRole("button", { name: /use login link instead/i }));
+    fireEvent.change(screen.getByLabelText(/email/i), {
       target: { value: "user@example.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: /send login link/i }));
@@ -129,8 +132,7 @@ describe("Login page", () => {
       </AuthProvider>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: /use password instead/i }));
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.change(await screen.findByLabelText(/email/i), {
       target: { value: "user@example.com" },
     });
     fireEvent.change(screen.getByLabelText(/password/i), {
