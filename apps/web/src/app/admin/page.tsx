@@ -1,0 +1,6 @@
+"use client";
+import { useCallback } from "react";
+import { AdminView } from "./admin-view";
+import { fetchAdminOverview } from "@/lib/admin-api";
+export default function AdminPage(){const load=useCallback(fetchAdminOverview,[]);return <AdminView title="Overview" load={load}>{(d:any)=><><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[["Revenue",`¥${(d.metrics.revenueFen/100).toLocaleString("en-US",{minimumFractionDigits:2})}`],["Refunds",`¥${(d.metrics.refundFen/100).toFixed(2)}`],["Generations",d.metrics.generationCount],["Users",d.metrics.activeUsers]].map(([k,v])=><div key={k} className="rounded-md border bg-background p-4"><p className="text-xs text-muted-foreground">{k}</p><p className="mt-2 text-2xl font-semibold">{v}</p></div>)}</div><div className="mt-6 overflow-hidden rounded-md border bg-background"><div className="border-b px-4 py-3 text-sm font-medium">Recent audit</div>{d.recentAudit.length?d.recentAudit.map((a:any)=><div key={a.id} className="grid gap-1 border-b px-4 py-3 text-sm last:border-0 sm:grid-cols-3"><span>{a.action}</span><span className="text-muted-foreground">{a.actorEmail}</span><span className="text-muted-foreground">{a.resourceId}</span></div>):<p className="p-4 text-sm text-muted-foreground">No audit events yet.</p>}</div></>}</AdminView>}
+

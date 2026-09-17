@@ -25,6 +25,7 @@ export function resolveDefaultAgentModel(env: {
 export type AgentBackendMode = "filesystem" | "state";
 
 export type ServerEnv = {
+  superAdminEmail?: string;
   agentBackendMode: AgentBackendMode;
   agentFilesRoot?: string;
   agentModel: string;
@@ -77,6 +78,8 @@ export function loadServerEnv(
   const agentFilesRoot =
     overrides.agentFilesRoot ??
     parseAgentFilesRoot(source.CREATIVE_AGENT_FILES_ROOT);
+  const superAdminEmail =
+    overrides.superAdminEmail ?? normalizeOptionalString(source.CREATIVE_SUPER_ADMIN_EMAIL);
   const openAIApiBase =
     overrides.openAIApiBase ?? normalizeOptionalString(source.OPENAI_API_BASE);
   const openAIApiKey =
@@ -210,6 +213,7 @@ export function loadServerEnv(
     version: overrides.version ?? readServerVersion(),
     webOrigin:
       overrides.webOrigin ?? source.CREATIVE_WEB_ORIGIN ?? DEFAULT_WEB_ORIGIN,
+    ...(superAdminEmail ? { superAdminEmail } : {}),
     ...(agentFilesRoot ? { agentFilesRoot } : {}),
     ...(googleApiKey ? { googleApiKey } : {}),
     ...(googleApplicationCredentials ? { googleApplicationCredentials } : {}),

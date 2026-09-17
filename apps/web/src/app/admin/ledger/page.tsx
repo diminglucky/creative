@@ -1,0 +1,2 @@
+"use client"; import {useCallback} from "react"; import {AdminView,Empty} from "../admin-view"; import {fetchAdminLedger} from "@/lib/admin-api";
+export default function LedgerPage(){const load=useCallback(fetchAdminLedger,[]);return <><h1 className="mb-6 text-xl font-semibold">Ledger</h1><AdminView title="" load={load}>{(d:any)=>d.entries.length?<pre className="overflow-auto rounded-md border bg-background p-4 text-xs">{JSON.stringify(d.entries,null,2)}</pre>:<Empty label="ledger entries"/>}</AdminView></>}

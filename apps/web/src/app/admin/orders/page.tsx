@@ -1,0 +1,2 @@
+"use client"; import {useCallback} from "react"; import {AdminView,Empty} from "../admin-view"; import {fetchAdminOrders} from "@/lib/admin-api";
+export default function OrdersPage(){const load=useCallback(fetchAdminOrders,[]);return <><h1 className="mb-6 text-xl font-semibold">Orders</h1><AdminView title="" load={load}>{(d:any)=>d.orders.length?<pre className="overflow-auto rounded-md border bg-background p-4 text-xs">{JSON.stringify(d.orders,null,2)}</pre>:<Empty label="orders"/>}</AdminView></>}

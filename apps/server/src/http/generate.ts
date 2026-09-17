@@ -1,5 +1,6 @@
 // @credits-system — Direct generation routes with credit deduction and tier checks
 import type { FastifyInstance } from "fastify";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import {
@@ -12,6 +13,8 @@ import {
 import { generateImage } from "../generation/image-generation.js";
 import { resolveImageProviderName } from "../generation/providers/registry.js";
 import type { CreditService } from "../features/credits/credit-service.js";
+import { BillingServiceError, type BillingService } from "../features/billing/billing-service.js";
+import { GenerationError } from "../generation/utils.js";
 import { CreditServiceError } from "../features/credits/credit-service.js";
 import type { TierGuard } from "../features/credits/tier-guard.js";
 import { TierGuardError } from "../features/credits/tier-guard.js";
@@ -41,6 +44,7 @@ export async function registerGenerateRoutes(
   app: FastifyInstance,
   options: {
     auth: RequestAuthenticator;
+    billingService?: BillingService;
     creditService?: CreditService;
     jobService?: JobService;
     tierGuard?: TierGuard;
@@ -62,6 +66,7 @@ export async function registerGenerateRoutes(
     }
 
     let payload: z.infer<typeof generateImageRequestSchema>;
+    let chargeId: string | undefined;
     try {
       payload = generateImageRequestSchema.parse(request.body);
     } catch {
@@ -91,8 +96,10 @@ export async function registerGenerateRoutes(
         await options.tierGuard.checkConcurrency(viewer.workspace.id, sub.plan);
         creditsCost = options.tierGuard.calculateCreditCost(model, "image_generation", { quality });
 
-        // Deduct credits before generation
-        if (creditsCost > 0) {
+        if (options.billingService) {
+          const charge = await options.billingService.chargeGeneration({ workspaceId: viewer.workspace.id, userId: user.id, modelId: model, generationType: "image", quality, idempotencyKey: `direct-image:${randomUUID()}` });
+          chargeId = charge.id;
+        } else if (creditsCost > 0) {
           await options.creditService.deductCredits(
             viewer.workspace.id, user.id, creditsCost, undefined,
             `Direct image generation: ${model}`,
@@ -126,6 +133,9 @@ export async function registerGenerateRoutes(
         height: result.height,
       });
     } catch (error) {
+      if (chargeId && options.billingService && !(error instanceof GenerationError && error.code === "safety_filter")) {
+        await options.billingService.refundGeneration({ chargeId, idempotencyKey: `refund:${chargeId}`, reason: error instanceof GenerationError ? error.code : "generation_failed" }).catch(()=>undefined);
+      }
       // Handle tier/credit errors
       if (error instanceof TierGuardError) {
         return reply.code(error.statusCode).send(
@@ -140,6 +150,9 @@ export async function registerGenerateRoutes(
             error: { code: error.code, message: error.message },
           }),
         );
+      }
+      if (error instanceof BillingServiceError) {
+        return reply.code(error.statusCode).send(applicationErrorResponseSchema.parse({ error: { code: error.code, message: error.message } }));
       }
 
       const message =
@@ -236,6 +249,13 @@ export async function registerGenerateRoutes(
         );
       }
 
+      let chargeId: string | undefined;
+      if (options.billingService) {
+        const charge = await options.billingService.chargeGeneration({ workspaceId, userId: user.id, modelId: model, generationType: "video", durationSeconds: payload.duration, quality: payload.resolution, idempotencyKey: `direct-video:${randomUUID()}` });
+        chargeId = charge.id;
+        creditsCost = charge.creditsCharged;
+      }
+
       // ── Create job ──
       const job = await options.jobService.createJob(user, {
         workspaceId,
@@ -250,12 +270,13 @@ export async function registerGenerateRoutes(
             : {}),
           ...(payload.inputImages?.length
             ? { input_images: payload.inputImages }
-            : {}),
+              : {}),
+          ...(chargeId ? { billing_charge_id: chargeId } : {}),
         },
       });
 
       // ── Deduct credits BEFORE generation ──
-      if (options.creditService && creditsCost > 0) {
+      if (!options.billingService && options.creditService && creditsCost > 0) {
         try {
           const txId = await options.creditService.deductCredits(
             workspaceId,
@@ -316,6 +337,9 @@ export async function registerGenerateRoutes(
             error: { code: error.code, message: error.message },
           }),
         );
+      }
+      if (error instanceof BillingServiceError) {
+        return reply.code(error.statusCode).send(applicationErrorResponseSchema.parse({ error: { code: error.code, message: error.message } }));
       }
       if (error instanceof JobServiceError) {
         return reply.code(error.statusCode).send(

@@ -1,0 +1,2 @@
+"use client"; import {useCallback} from "react"; import {AdminView,Empty} from "../admin-view"; import {fetchAdminModels} from "@/lib/admin-api";
+export default function ModelsPage(){const load=useCallback(fetchAdminModels,[]);return <><h1 className="mb-6 text-xl font-semibold">Models</h1><AdminView title="" load={load}>{(d:any)=>d.models.length?<pre className="overflow-auto rounded-md border bg-background p-4 text-xs">{JSON.stringify(d.models,null,2)}</pre>:<Empty label="models"/>}</AdminView></>}

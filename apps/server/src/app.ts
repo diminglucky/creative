@@ -61,12 +61,15 @@ import {
   type JobService,
 } from "./features/jobs/job-service.js";
 import { createLemonSqueezyClient } from "./features/payments/lemon-squeezy-client.js";
+import { createAdminService, type AdminService } from "./features/admin/admin-service.js";
+import { createBillingService, type BillingService } from "./features/billing/billing-service.js";
 import {
   createPaymentService,
   buildVariantMap,
   type PaymentService,
 } from "./features/payments/payment-service.js";
 import { registerPaymentRoutes } from "./http/payments.js";
+import { registerAdminRoutes } from "./http/admin.js";
 import { registerPaymentWebhookRoute } from "./http/payments-webhook.js";
 import { registerCreditRoutes } from "./http/credits.js";
 import { registerFontsRoutes } from "./http/fonts.js";
@@ -87,6 +90,7 @@ import { registerUploadRoutes } from "./http/uploads.js";
 import { registerSkillRoutes } from "./http/skills.js";
 import { registerMarketplaceRoutes } from "./http/skills-marketplace.js";
 import { registerViewerRoutes } from "./http/viewer.js";
+import { registerWalletRoutes } from "./http/wallet.js";
 import { CanvasEventBuffer } from "./ws/event-buffer.js";
 import { ConnectionManager } from "./ws/connection-manager.js";
 import { registerWsRoute } from "./ws/handler.js";
@@ -98,12 +102,14 @@ import {
 } from "./supabase/user.js";
 
 export type BuildAppOptions = {
+  adminService?: AdminService;
   agentFactory?: CreativeAgentFactory;
   agentModel?: BaseLanguageModel | string;
   agentPersistenceService?: AgentPersistenceService;
   agentRunMetadataService?: AgentRunMetadataService;
   auth?: RequestAuthenticator;
   brandKitService?: BrandKitService;
+  billingService?: BillingService;
   canvasService?: CanvasService;
   chatService?: ChatService;
   connectionManager?: ConnectionManager;
@@ -191,6 +197,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       : undefined);
   const creditService =
     options.creditService ?? createCreditService({ getAdminClient });
+  const adminService =
+    options.adminService ?? createAdminService({ getAdminClient });
+  const billingService =
+    options.billingService ?? createBillingService({ getAdminClient });
   const tierGuard =
     options.tierGuard ?? createTierGuard({ getAdminClient });
 
@@ -259,6 +269,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
 
   void registerHealthRoutes(app, env);
+  registerAdminRoutes(app, {
+    auth,
+    ...(env.superAdminEmail ? { adminEmail: env.superAdminEmail } : {}),
+    service: adminService,
+  });
+  registerWalletRoutes(app, { auth, viewerService, getAdminClient });
   void registerFontsRoutes(app, { env });
   void registerImageProxyRoute(app);
   void registerRunRoutes(app, agentRuns, {
@@ -306,6 +322,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   void registerGenerateRoutes(app, {
     auth,
     creditService,
+    billingService,
     uploadService,
     viewerService,
     ...(jobService ? { jobService } : {}),
@@ -313,7 +330,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
   void registerCreditRoutes(app, { auth, creditService, viewerService });
   if (jobService) {
-    void registerJobRoutes(app, { auth, creditService, jobService, tierGuard, viewerService });
+    void registerJobRoutes(app, { auth, billingService, creditService, jobService, tierGuard, viewerService });
   }
   void registerSkillRoutes(app, { auth, createUserClient, viewerService });
   void registerMarketplaceRoutes(app, { auth, createUserClient, viewerService });

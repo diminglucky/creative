@@ -1,0 +1,9 @@
+"use client";
+import { useCallback,useState } from "react";
+import { AdminView,Empty } from "../admin-view";
+import { fetchAdminProviders,updateAdminProvider } from "@/lib/admin-api";
+import { useAuth } from "@/lib/auth-context";
+import { Button } from "@/components/ui/button"; import { Input } from "@/components/ui/input";
+function Provider({p}:{p:any}){const {session}=useAuth();const[url,setUrl]=useState(p.baseUrl);const[enabled,setEnabled]=useState(p.enabled);const[error,setError]=useState("");const[saved,setSaved]=useState(false);async function save(){try{const u=new URL(url);if(!["http:","https:"].includes(u.protocol))throw new Error();}catch{setError("Enter a valid HTTP or HTTPS URL.");return}setError("");await updateAdminProvider(session!.access_token,p.id,{baseUrl:url,enabled});setSaved(true)}return <div className="rounded-md border bg-background p-4"><div className="mb-4 flex items-center justify-between"><div><h2 className="font-medium">{p.name}</h2><p className="text-xs text-muted-foreground">{p.id}</p></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={enabled} onChange={e=>setEnabled(e.target.checked)}/>Enabled</label></div><label className="mb-3 block text-sm">{p.name} API base URL<Input className="mt-1" value={url} onChange={e=>setUrl(e.target.value)} aria-invalid={Boolean(error)}/></label><label className="mb-4 block text-sm">API secret<Input className="mt-1" value={p.secretMask} disabled/></label>{error?<p className="mb-3 text-sm text-destructive">{error}</p>:null}{saved?<p className="mb-3 text-sm">Provider saved.</p>:null}<Button onClick={save}>Save {p.name}</Button></div>}
+export default function ProvidersPage(){const load=useCallback(fetchAdminProviders,[]);return <AdminView title="Providers" load={load}>{(d:any)=>d.providers.length?<div className="grid gap-4">{d.providers.map((p:any)=><Provider key={p.id} p={p}/>)}</div>:<Empty label="providers"/>}</AdminView>}
+

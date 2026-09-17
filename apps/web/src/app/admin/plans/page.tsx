@@ -1,0 +1,2 @@
+"use client"; import {useCallback} from "react"; import {AdminView,Empty} from "../admin-view"; import {fetchAdminPlans} from "@/lib/admin-api";
+export default function PlansPage(){const load=useCallback(fetchAdminPlans,[]);return <><h1 className="mb-6 text-xl font-semibold">Plans</h1><AdminView title="" load={load}>{(d:any)=>d.plans.length?<pre className="overflow-auto rounded-md border bg-background p-4 text-xs">{JSON.stringify(d.plans,null,2)}</pre>:<Empty label="plans"/>}</AdminView></>}

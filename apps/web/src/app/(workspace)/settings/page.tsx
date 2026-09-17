@@ -7,8 +7,10 @@ import { AgentSection } from "@/components/agent-section";
 import { BillingSection } from "@/components/billing-section";
 import { CreditUsageHistory } from "@/components/credits/credit-usage-history";
 import { ProfileSection } from "@/components/profile-section";
+import { WalletSection } from "@/components/wallet-section";
 import { SettingsSkeleton } from "@/components/skeletons/settings-skeleton";
 import { useAuth } from "@/lib/auth-context";
+import { useWallet } from "@/hooks/use-wallet";
 import {
   ApiAuthError,
   fetchModels,
@@ -18,17 +20,19 @@ import {
   updateWorkspaceSettings,
 } from "@/lib/server-api";
 
-type SettingsTab = "profile" | "agent" | "billing" | "usage";
+type SettingsTab = "profile" | "agent" | "billing" | "wallet" | "usage";
 
 const tabs: Array<{ id: SettingsTab; label: string }> = [
   { id: "profile", label: "Profile" },
   { id: "agent", label: "Agent" },
   { id: "billing", label: "Billing" },
+  { id: "wallet", label: "Wallet" },
   { id: "usage", label: "Usage" },
 ];
 
 export default function SettingsPage() {
   const { session } = useAuth();
+  const { wallet, save: saveWallet } = useWallet(session?.access_token);
   const searchParams = useSearchParams();
 
   const initialTab = (searchParams.get("tab") as SettingsTab) ?? "profile";
@@ -154,6 +158,8 @@ export default function SettingsPage() {
             onSave={handleAgentSave}
             fetchModels={stableFetchModels}
           />
+        ) : activeTab === "wallet" ? (
+          wallet ? <WalletSection wallet={wallet} onSave={saveWallet} /> : null
         ) : activeTab === "usage" ? (
           <CreditUsageHistory />
         ) : (

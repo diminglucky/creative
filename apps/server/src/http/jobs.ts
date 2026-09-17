@@ -1,5 +1,6 @@
 // @credits-system — Job creation routes with credit balance checks and tier enforcement
 import type { FastifyInstance, FastifyReply } from "fastify";
+import { randomUUID } from "node:crypto";
 
 import type { BackgroundJobStatus, BackgroundJobType, ImageQualityLevel } from "@creative/shared";
 import {
@@ -26,11 +27,13 @@ import {
 } from "../features/credits/tier-guard.js";
 import type { ViewerService } from "../features/bootstrap/ensure-user-foundation.js";
 import type { RequestAuthenticator } from "../supabase/user.js";
+import { BillingServiceError, type BillingService } from "../features/billing/billing-service.js";
 
 export async function registerJobRoutes(
   app: FastifyInstance,
   options: {
     auth: RequestAuthenticator;
+    billingService?: BillingService;
     creditService?: CreditService;
     jobService: JobService;
     tierGuard?: TierGuard;
@@ -60,6 +63,7 @@ export async function registerJobRoutes(
         creditsCost = options.tierGuard.calculateCreditCost(model, "image_generation", { quality });
       }
 
+      const charge = options.billingService ? await options.billingService.chargeGeneration({ workspaceId: viewer.workspace.id, userId: user.id, modelId: model, generationType: "image", idempotencyKey: `image-job:${randomUUID()}` }) : undefined;
       const job = await options.jobService.createJob(user, {
         workspaceId: viewer.workspace.id,
         ...(payload.project_id !== undefined
@@ -80,12 +84,13 @@ export async function registerJobRoutes(
           ...(payload.model !== undefined ? { model: payload.model } : {}),
           ...(payload.aspect_ratio !== undefined
             ? { aspect_ratio: payload.aspect_ratio }
-            : {}),
+              : {}),
+          ...(charge ? { billing_charge_id: charge.id } : {}),
         },
       });
 
       // Deduct credits after job creation (we need the job ID for tracking)
-      if (options.creditService && creditsCost > 0) {
+      if (!options.billingService && options.creditService && creditsCost > 0) {
         try {
           const txId = await options.creditService.deductCredits(
             viewer.workspace.id,
@@ -137,6 +142,7 @@ export async function registerJobRoutes(
         );
       }
 
+      const charge = options.billingService ? await options.billingService.chargeGeneration({ workspaceId: viewer.workspace.id, userId: user.id, modelId: model, generationType: "video", durationSeconds: payload.duration, quality: payload.resolution, idempotencyKey: `video-job:${randomUUID()}` }) : undefined;
       const job = await options.jobService.createJob(user, {
         workspaceId: viewer.workspace.id,
         ...(payload.project_id !== undefined
@@ -161,11 +167,12 @@ export async function registerJobRoutes(
           ...(payload.input_images !== undefined ? { input_images: payload.input_images } : {}),
           ...(payload.input_video !== undefined ? { input_video: payload.input_video } : {}),
           ...(payload.enable_audio !== undefined ? { enable_audio: payload.enable_audio } : {}),
+          ...(charge ? { billing_charge_id: charge.id } : {}),
         },
       });
 
       // Deduct credits after job creation
-      if (options.creditService && creditsCost > 0) {
+      if (!options.billingService && options.creditService && creditsCost > 0) {
         try {
           const txId = await options.creditService.deductCredits(
             viewer.workspace.id,

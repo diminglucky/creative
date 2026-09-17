@@ -1,0 +1,2 @@
+"use client"; import {useCallback} from "react"; import {AdminView,Empty} from "../admin-view"; import {fetchAdminUsers} from "@/lib/admin-api";
+export default function UsersPage(){const load=useCallback(fetchAdminUsers,[]);return <><h1 className="mb-6 text-xl font-semibold">Users</h1><AdminView title="" load={load}>{(d:any)=>d.users.length?<pre className="overflow-auto rounded-md border bg-background p-4 text-xs">{JSON.stringify(d.users,null,2)}</pre>:<Empty label="users"/>}</AdminView></>}
