@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Database } from "@loomic/shared";
+import type { Database } from "@creative/shared";
 
 import { mapHomeDiscoveryRows } from "@/lib/home-discovery-library";
 

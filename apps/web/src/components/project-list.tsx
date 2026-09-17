@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProjectSummary } from "@loomic/shared";
+import type { ProjectSummary } from "@creative/shared";
 import { Trash2 } from "lucide-react";
 import Link from "next/link";
 

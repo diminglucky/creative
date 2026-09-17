@@ -4,7 +4,7 @@ import type {
   ChatSessionSummary,
   ContentBlock,
   Json,
-} from "@loomic/shared";
+} from "@creative/shared";
 
 import type { AuthenticatedUser, UserSupabaseClient } from "../../supabase/user.js";
 import type { ThreadService } from "./thread-service.js";

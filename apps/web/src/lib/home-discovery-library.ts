@@ -1,4 +1,4 @@
-import type { Database } from "@loomic/shared";
+import type { Database } from "@creative/shared";
 
 import type { HomeDiscoveryCategory } from "./home-discovery-seeds";
 import { homeDiscoverySeedCategories } from "./home-discovery-seeds";

@@ -5,7 +5,7 @@ import {
   marketplaceInstallRequestSchema,
   skillDetailResponseSchema,
   unauthenticatedErrorResponseSchema,
-} from "@loomic/shared";
+} from "@creative/shared";
 
 import {
   searchMarketplace,

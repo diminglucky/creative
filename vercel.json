@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @loomic/shared build && pnpm --filter @loomic/web build",
+  "buildCommand": "pnpm --filter @creative/shared build && pnpm --filter @creative/web build",
   "outputDirectory": "apps/web/out",
   "cleanUrls": true,
   "rewrites": [

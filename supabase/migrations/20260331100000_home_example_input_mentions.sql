@@ -50,12 +50,12 @@ update public.home_example_examples
 
 update public.home_example_examples
   set prompt = $p$A minimalist product photo of a trendy high-quality ceramic espresso cup and saucer standing on a light wood surface against a clean white wall, with this logo printed in black on the cup. The scene is cinematic and editorial, illuminated by dramatic, warm afternoon light from the side, casting high contrast shadow. The composition is clean and organic. Sharp focus on the cup, warm color palette.$p$,
-      input_mentions = '[{"type":"image","name":"Logo","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/loomic-logo.png"},{"type":"tool","name":"Nano Banana","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"}]'::jsonb
+      input_mentions = '[{"type":"image","name":"Logo","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/creative-logo.png"},{"type":"tool","name":"Nano Banana","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"}]'::jsonb
   where title = 'Design branded merch for your coffee shop.';
 
 update public.home_example_examples
   set prompt = $p$Generate a studio product shot of a light blue cap featuring this logo embroidered on the front. The cap should appear realistic, well-lit, and minimal, placed on a neutral background. The embroidery should be in black thread, flat and subtle.$p$,
-      input_mentions = '[{"type":"image","name":"Logo","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/loomic-logo.png"},{"type":"tool","name":"Nano Banana","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"}]'::jsonb
+      input_mentions = '[{"type":"image","name":"Logo","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/creative-logo.png"},{"type":"tool","name":"Nano Banana","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"}]'::jsonb
   where title = 'Put your logo on a cap.';
 
 update public.home_example_examples
@@ -132,7 +132,7 @@ update public.home_example_examples
 
 update public.home_example_examples
   set prompt = $p$A clean, minimalist, and modern ad poster for this perfume product. The bottle is centered in the lower half of the image. The background is a smooth vertical gradient that transitions from a light yellow at the bottom to a pastel bright butter yellow at the top. The poster includes the logo in white, and minimalist, small white sans serif text at the top: '20% Off Our Signature Scent'$p$,
-      input_mentions = '[{"type":"image","name":"Logo","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/loomic-logo.png"},{"type":"image","name":"Perfume","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/e-commerce/e6-input-2.webp"},{"type":"tool","name":"Nano Banana","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"}]'::jsonb
+      input_mentions = '[{"type":"image","name":"Logo","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/creative-logo.png"},{"type":"image","name":"Perfume","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/e-commerce/e6-input-2.webp"},{"type":"tool","name":"Nano Banana","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"}]'::jsonb
   where title = 'Generate ad graphics for your product.';
 
 -- Fix Video examples
@@ -172,7 +172,7 @@ values
   (
     'nano-banana-pro',
     $t$Design pixel-perfect web interface.$t$,
-    $p$Generate a landing page for a furniture shop called Loomic, Neo Brutalism style. These are the product images:$p$,
+    $p$Generate a landing page for a furniture shop called Creative, Neo Brutalism style. These are the product images:$p$,
     array[
       'https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/nano-banana-pro/e1-1.webp',
       'https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/nano-banana-pro/e1-2.webp',
@@ -238,6 +238,6 @@ values
       'https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/nano-banana-pro/e6-2.webp',
       'https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/nano-banana-pro/e6-3.webp'
     ]::text[],
-    '[{"type":"tool","name":"Nano Banana Pro","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"},{"type":"image","name":"Logo","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/loomic-logo.png"}]'::jsonb,
+    '[{"type":"tool","name":"Nano Banana Pro","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"},{"type":"image","name":"Logo","imgSrc":"https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/creative-logo.png"}]'::jsonb,
     5
   );

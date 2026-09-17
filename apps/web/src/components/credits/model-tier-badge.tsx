@@ -2,7 +2,7 @@
 "use client";
 
 import { Lock } from "lucide-react";
-import type { SubscriptionPlan } from "@loomic/shared";
+import type { SubscriptionPlan } from "@creative/shared";
 
 interface ModelTierBadgeProps {
   creditCost: number;

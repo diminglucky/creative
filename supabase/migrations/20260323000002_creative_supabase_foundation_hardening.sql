@@ -1,4 +1,4 @@
--- Loomic Supabase Foundation Hardening
+-- Creative Supabase Foundation Hardening
 -- Follow-up migration for production safety fixes without rewriting applied history.
 
 create or replace function private.is_workspace_admin_or_owner(p_workspace_id uuid)

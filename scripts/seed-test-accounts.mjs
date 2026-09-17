@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Seed test accounts for Loomic open-source deployment.
+ * Seed test accounts for Creative open-source deployment.
  *
  * Creates 4 test users across different plan tiers so you can immediately
  * explore the full product without setting up payments.
@@ -18,13 +18,13 @@ import { createClient } from "@supabase/supabase-js";
 // ── Config ───────────────────────────────────────────────────────────
 
 const TEST_ACCOUNTS = [
-  { email: "free@test.loomic.com",    plan: "free",    credits: 50    },
-  { email: "starter@test.loomic.com", plan: "starter", credits: 1_200 },
-  { email: "pro@test.loomic.com",     plan: "pro",     credits: 5_000 },
-  { email: "ultra@test.loomic.com",   plan: "ultra",   credits: 15_000 },
+  { email: "free@test.creative.com",    plan: "free",    credits: 50    },
+  { email: "starter@test.creative.com", plan: "starter", credits: 1_200 },
+  { email: "pro@test.creative.com",     plan: "pro",     credits: 5_000 },
+  { email: "ultra@test.creative.com",   plan: "ultra",   credits: 15_000 },
 ];
 
-const PASSWORD = "opensourceloomic";
+const PASSWORD = "opensourcecreative";
 
 // ── Load env ─────────────────────────────────────────────────────────
 

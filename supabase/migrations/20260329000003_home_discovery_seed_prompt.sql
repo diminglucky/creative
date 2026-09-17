@@ -1,4 +1,4 @@
--- Add Loomic-internal prompt payloads for home discovery cards.
+-- Add Creative-internal prompt payloads for home discovery cards.
 -- Discovery cards no longer navigate to external case URLs in the UI.
 
 alter table public.home_discovery_cases

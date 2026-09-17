@@ -66,7 +66,7 @@ for (const appName of ["web", "server", "desktop"]) {
   });
 }
 
-test("@loomic/config exports a single low-drift package contract", async () => {
+test("@creative/config exports a single low-drift package contract", async () => {
   const source = await readText("packages/config/src/index.ts");
 
   assert.doesNotMatch(source, /apps\/\*/);
@@ -76,7 +76,7 @@ test("@loomic/config exports a single low-drift package contract", async () => {
 test("shared package placeholder exists for the upcoming contract task", async () => {
   const manifest = await readJson("packages/shared/package.json");
 
-  assert.equal(manifest.name, "@loomic/shared");
+  assert.equal(manifest.name, "@creative/shared");
   assert.equal(manifest.type, "module");
 });
 

@@ -1,4 +1,4 @@
-import type { AssetBucket, AssetObject } from "@loomic/shared";
+import type { AssetBucket, AssetObject } from "@creative/shared";
 
 import type {
   AuthenticatedUser,

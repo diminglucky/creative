@@ -76,7 +76,7 @@ export function loadServerEnv(
 ): ServerEnv {
   const agentFilesRoot =
     overrides.agentFilesRoot ??
-    parseAgentFilesRoot(source.LOOMIC_AGENT_FILES_ROOT);
+    parseAgentFilesRoot(source.CREATIVE_AGENT_FILES_ROOT);
   const openAIApiBase =
     overrides.openAIApiBase ?? normalizeOptionalString(source.OPENAI_API_BASE);
   const openAIApiKey =
@@ -159,7 +159,7 @@ export function loadServerEnv(
     overrides.lemonSqueezyVariantBusinessYearly ??
     normalizeOptionalString(source.LEMONSQUEEZY_VARIANT_BUSINESS_YEARLY);
   const skillsRoot =
-    overrides.skillsRoot ?? normalizeOptionalString(source.LOOMIC_SKILLS_ROOT);
+    overrides.skillsRoot ?? normalizeOptionalString(source.CREATIVE_SKILLS_ROOT);
   const workerConcurrency =
     overrides.workerConcurrency ??
     (source.WORKER_CONCURRENCY
@@ -189,10 +189,10 @@ export function loadServerEnv(
       : undefined);
 
   // Resolve default agent model based on available provider keys.
-  // Explicit LOOMIC_AGENT_MODEL always takes precedence; otherwise fall back
+  // Explicit CREATIVE_AGENT_MODEL always takes precedence; otherwise fall back
   // to Gemini 2.5 Flash when only Google/Vertex is configured.
   const explicitModel =
-    overrides.agentModel ?? parseAgentModel(source.LOOMIC_AGENT_MODEL);
+    overrides.agentModel ?? parseAgentModel(source.CREATIVE_AGENT_MODEL);
   const resolvedAgentModel =
     explicitModel ??
     resolveDefaultAgentModel({
@@ -204,12 +204,12 @@ export function loadServerEnv(
   return {
     agentBackendMode:
       overrides.agentBackendMode ??
-      parseAgentBackendMode(source.LOOMIC_AGENT_BACKEND_MODE),
+      parseAgentBackendMode(source.CREATIVE_AGENT_BACKEND_MODE),
     agentModel: resolvedAgentModel,
-    port: overrides.port ?? parsePort(source.LOOMIC_SERVER_PORT ?? source.PORT),
+    port: overrides.port ?? parsePort(source.CREATIVE_SERVER_PORT ?? source.PORT),
     version: overrides.version ?? readServerVersion(),
     webOrigin:
-      overrides.webOrigin ?? source.LOOMIC_WEB_ORIGIN ?? DEFAULT_WEB_ORIGIN,
+      overrides.webOrigin ?? source.CREATIVE_WEB_ORIGIN ?? DEFAULT_WEB_ORIGIN,
     ...(agentFilesRoot ? { agentFilesRoot } : {}),
     ...(googleApiKey ? { googleApiKey } : {}),
     ...(googleApplicationCredentials ? { googleApplicationCredentials } : {}),
@@ -272,7 +272,7 @@ function parseAgentBackendMode(rawMode: string | undefined): AgentBackendMode {
     return rawMode;
   }
 
-  throw new Error(`Invalid LOOMIC_AGENT_BACKEND_MODE value: ${rawMode}`);
+  throw new Error(`Invalid CREATIVE_AGENT_BACKEND_MODE value: ${rawMode}`);
 }
 
 function parseAgentFilesRoot(rawRoot: string | undefined) {
@@ -295,7 +295,7 @@ function parsePort(rawPort: string | undefined) {
 
   const port = Number.parseInt(rawPort, 10);
   if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(`Invalid LOOMIC_SERVER_PORT value: ${rawPort}`);
+    throw new Error(`Invalid CREATIVE_SERVER_PORT value: ${rawPort}`);
   }
 
   return port;

@@ -6,7 +6,7 @@ import type {
   RunCreateRequest,
   RunCreateResponse,
   StreamEvent,
-} from "@loomic/shared";
+} from "@creative/shared";
 
 type MockRunStatus = "accepted" | "running" | "completed" | "canceled";
 

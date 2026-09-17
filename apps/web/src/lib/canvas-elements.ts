@@ -1,4 +1,4 @@
-import type { ImageArtifact, VideoArtifact } from "@loomic/shared";
+import type { ImageArtifact, VideoArtifact } from "@creative/shared";
 
 import { getServerBaseUrl } from "./env";
 

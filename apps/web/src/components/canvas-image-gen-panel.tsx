@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 
-import type { ImageArtifact } from "@loomic/shared";
+import type { ImageArtifact } from "@creative/shared";
 
 import { generateImageDirect } from "../lib/server-api";
 import { insertImageOnCanvas } from "../lib/canvas-elements";

@@ -68,7 +68,7 @@ export const homeExampleSeedCategories: HomeExampleCategory[] = [
   cat("nano-banana-pro", "Nano Banana Pro", "Special", [
     ex(
       "Design pixel-perfect web interface.",
-      "Generate a landing page for a furniture shop called Loomic, Neo Brutalism style. These are the product images:",
+      "Generate a landing page for a furniture shop called Creative, Neo Brutalism style. These are the product images:",
       [
         "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/nano-banana-pro/e1-1.webp",
         "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/nano-banana-pro/e1-2.webp",
@@ -142,7 +142,7 @@ export const homeExampleSeedCategories: HomeExampleCategory[] = [
       ],
       [
         tool("Nano Banana Pro", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"),
-        img("Logo", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/loomic-logo.png"),
+        img("Logo", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/creative-logo.png"),
       ],
     ),
   ], "special"),
@@ -243,7 +243,7 @@ export const homeExampleSeedCategories: HomeExampleCategory[] = [
         "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/branding/e2-3.webp",
       ],
       [
-        img("Logo", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/loomic-logo.png"),
+        img("Logo", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/creative-logo.png"),
         tool("Nano Banana", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"),
       ],
     ),
@@ -256,7 +256,7 @@ export const homeExampleSeedCategories: HomeExampleCategory[] = [
         "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/branding/e3-3.webp",
       ],
       [
-        img("Logo", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/loomic-logo.png"),
+        img("Logo", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/creative-logo.png"),
         tool("Nano Banana", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"),
       ],
     ),
@@ -462,7 +462,7 @@ export const homeExampleSeedCategories: HomeExampleCategory[] = [
         "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/examples/e-commerce/e6-3.webp",
       ],
       [
-        img("Logo", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/loomic-logo.png"),
+        img("Logo", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/common/creative-logo.png"),
         img("Perfume", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/inputs/e-commerce/e6-input-2.webp"),
         tool("Nano Banana", "https://jmcrxgenontlkxktpihl.supabase.co/storage/v1/object/public/project-assets/home-seeds/icons/imagen-3.svg"),
       ],

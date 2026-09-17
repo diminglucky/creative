@@ -4,7 +4,7 @@ import type {
   CreditTransactionsResponse,
   ClaimDailyResponse,
   SubscriptionPlan,
-} from "@loomic/shared";
+} from "@creative/shared";
 
 import { getServerBaseUrl } from "./env";
 import { ApiAuthError, ApiApplicationError } from "./server-api";

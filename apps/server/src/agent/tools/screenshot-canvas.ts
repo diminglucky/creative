@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import type { ConnectionManager } from "../../ws/connection-manager.js";
 import type { PersistImageFn } from "./image-generate.js";
-import type { ScreenshotResult } from "@loomic/shared";
+import type { ScreenshotResult } from "@creative/shared";
 
 const screenshotCanvasSchema = z.object({
   mode: z

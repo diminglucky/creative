@@ -9,7 +9,7 @@ import {
   unauthenticatedErrorResponseSchema,
   viewerResponseSchema,
   type SubscriptionPlan,
-} from "@loomic/shared";
+} from "@creative/shared";
 
 import {
   BootstrapError,

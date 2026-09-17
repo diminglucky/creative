@@ -1,6 +1,6 @@
 "use client";
 
-import { type VideoResolution, getVideoCreditCost } from "@loomic/shared";
+import { type VideoResolution, getVideoCreditCost } from "@creative/shared";
 import { Lock, Plus, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";

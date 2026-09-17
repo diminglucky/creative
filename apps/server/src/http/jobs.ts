@@ -1,7 +1,7 @@
 // @credits-system — Job creation routes with credit balance checks and tier enforcement
 import type { FastifyInstance, FastifyReply } from "fastify";
 
-import type { BackgroundJobStatus, BackgroundJobType, ImageQualityLevel } from "@loomic/shared";
+import type { BackgroundJobStatus, BackgroundJobType, ImageQualityLevel } from "@creative/shared";
 import {
   applicationErrorResponseSchema,
   createImageJobRequestSchema,
@@ -10,7 +10,7 @@ import {
   jobListResponseSchema,
   jobResponseSchema,
   unauthenticatedErrorResponseSchema,
-} from "@loomic/shared";
+} from "@creative/shared";
 
 import {
   JobServiceError,

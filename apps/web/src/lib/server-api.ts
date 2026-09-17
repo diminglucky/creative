@@ -25,7 +25,7 @@ import type {
   ViewerResponse,
   WorkspaceSettingsResponse,
   WorkspaceSkillListResponse,
-} from "@loomic/shared";
+} from "@creative/shared";
 
 import { dedupeRequest } from "./dedupe-request";
 import { getServerBaseUrl } from "./env";
