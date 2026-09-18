@@ -54,7 +54,6 @@ export function createAdminService(options: { getAdminClient: () => AdminSupabas
       await audit(actor, "provider.updated", "provider", id, { baseUrl: input.baseUrl, enabled: input.enabled, secretChanged: Boolean(input.secret) });
     },
     async discoverProviderModels(id: string, input: { baseUrl: string; secret?: string | undefined }) {
-      if (id !== "openai") throw new Error("Only OpenAI-compatible discovery is supported.");
       let secret = input.secret;
       if (!secret) {
         const { data, error } = await client().from("platform_providers").select("secret_ciphertext").eq("id", id).single();
@@ -67,8 +66,11 @@ export function createAdminService(options: { getAdminClient: () => AdminSupabas
       const endpoint = `${input.baseUrl.replace(/\/$/, "")}/models`;
       const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${secret}`, Accept: "application/json" } });
       if (!response.ok) throw new Error(`Failed to fetch models: ${response.status}`);
-      const payload = await response.json() as { data?: Array<{ id?: string; owned_by?: string }> };
-      return (payload.data ?? []).filter((model) => typeof model.id === "string" && model.id.length > 0).map((model) => ({ id: model.id!, ownedBy: model.owned_by ?? "" }));
+      const payload = await response.json() as { data?: Array<{ id?: string; owned_by?: string }>; results?: Array<{ id?: string; name?: string; owner?: string }> };
+      const models = payload.data ?? payload.results ?? [];
+      return models
+        .map((model) => ({ id: model.id ?? ("name" in model ? model.name : undefined), ownedBy: "owned_by" in model ? model.owned_by ?? "" : "owner" in model ? model.owner ?? "" : "" }))
+        .filter((model): model is { id: string; ownedBy: string } => typeof model.id === "string" && model.id.length > 0);
     },
     async listModels() { const { data, error } = await client().from("generation_prices").select("*").order("generation_type").order("display_name"); if (error) throw error; return data ?? []; },
     async createModel(actor: Actor, input: any) { const { error } = await client().from("generation_prices").upsert({ model_id: input.modelId, generation_type: input.generationType, display_name: input.displayName, provider_id: input.providerId, credit_price: input.creditPrice, money_price_fen: input.moneyPriceFen, cost_price_fen: input.costPriceFen, minimum_plan: input.minimumPlan, enabled: input.enabled, updated_at: new Date().toISOString() }, { onConflict: "model_id,generation_type" }); if(error)throw error;await audit(actor,"model.created","model",input.modelId,input); },

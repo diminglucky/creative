@@ -77,6 +77,13 @@ describe("admin routes", () => {
     expect(service.discoverProviderModels).toHaveBeenCalledWith("openai", { baseUrl: "https://gateway.example.com/v1", secret: "sk-test" });
   });
 
+  it("discovers models for any configured provider", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    const response = await app.inject({ method: "POST", url: "/api/admin/providers/volces/models/discover", payload: { baseUrl: "https://ark.example.com/api/v3", secret: "test-key" } });
+    expect(response.statusCode).toBe(200);
+    expect(service.discoverProviderModels).toHaveBeenCalledWith("volces", expect.any(Object));
+  });
+
   it("imports an image model with billing prices", async () => {
     const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
     const payload = { providerId: "openai", modelId: "gpt-image-1", displayName: "GPT Image 1", creditPrice: 12, moneyPriceFen: 199, costPriceFen: 80, minimumPlan: "free", enabled: true };

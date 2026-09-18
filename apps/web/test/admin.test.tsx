@@ -246,6 +246,21 @@ describe("admin console", () => {
     await waitFor(() => expect(mockCreateModel).toHaveBeenCalledWith("admin-token", expect.objectContaining({ providerId: "openai", modelId: "gpt-image-1", creditPrice: 15, moneyPriceFen: 299, enabled: true })));
   });
 
+  it("offers model discovery and pricing for other configured providers", async () => {
+    mockFetchProviders.mockResolvedValue({ providers: [{ id: "volces", name: "Volcengine", baseUrl: "https://ark.example.com/api/v3", enabled: true, secretMask: "已安全加密", hasSecret: true }] });
+    renderAdmin(<ProvidersPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "获取 Volcengine 模型" }));
+    expect(await screen.findByText("gpt-image-1")).toBeInTheDocument();
+  });
+
+  it("shows provider save failures instead of failing silently", async () => {
+    mockFetchProviders.mockResolvedValue({ providers: [{ id: "openai", name: "OpenAI", baseUrl: "https://api.openai.com/v1", enabled: true }] });
+    mockUpdateProvider.mockRejectedValue(new Error("未配置加密主密钥"));
+    renderAdmin(<ProvidersPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "保存 OpenAI" }));
+    expect(await screen.findByText("未配置加密主密钥")).toBeInTheDocument();
+  });
+
   it.each([
     ["模型定价", <ModelsPage />],
     ["订阅套餐", <PlansPage />],
