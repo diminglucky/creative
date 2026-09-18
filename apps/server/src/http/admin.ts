@@ -9,6 +9,8 @@ const planUpdateSchema = z.object({ name: z.string().min(1), description: z.stri
 const userAdjustmentSchema = z.object({ amount: z.number().int().refine((v) => v !== 0), reason: z.string().min(2).max(200) });
 const providerDiscoverySchema = z.object({ baseUrl: z.string().url().refine((v) => /^https?:\/\//i.test(v)), secret: z.string().min(1).optional() });
 const modelCreateSchema = z.object({ providerId: z.string().min(1), modelId: z.string().min(1), displayName: z.string().min(1), creditPrice: z.number().int().nonnegative(), costPriceFen: z.number().int().nonnegative().default(0), minimumPlan: z.string().min(1).default("free"), enabled: z.boolean().default(true) });
+const creditRatioSchema=z.object({creditsPerYuan:z.number().int().positive()});
+const creditPackSchema=z.object({id:z.string().min(1).max(64).regex(/^[a-z0-9-]+$/),name:z.string().min(1).max(80),amountFen:z.number().int().positive(),bonusCredits:z.number().int().nonnegative(),lemonSqueezyVariantId:z.string().min(1),enabled:z.boolean()});
 
 export function registerAdminRoutes(app: FastifyInstance, options: { auth: RequestAuthenticator; adminEmail?: string; service: AdminService }) {
   const guard = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -30,5 +32,10 @@ export function registerAdminRoutes(app: FastifyInstance, options: { auth: Reque
   app.get("/api/admin/users", async(req,reply)=>{if(!await guard(req,reply))return;return {users:await options.service.listUsers()};});
   app.post("/api/admin/users/:id/adjust",async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;const parsed=userAdjustmentSchema.safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"Invalid balance adjustment"}});await options.service.adjustUser(actor,(req.params as any).id,parsed.data);return reply.code(204).send();});
   app.get("/api/admin/orders", async(req,reply)=>{if(!await guard(req,reply))return;return {orders:await options.service.listOrders()};});
+  app.get("/api/admin/credit-packs",async(req,reply)=>{if(!await guard(req,reply))return;return options.service.getCreditPackSettings();});
+  app.patch("/api/admin/credit-packs/settings",async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;const parsed=creditRatioSchema.safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"积分兑换比例必须是正整数"}});await options.service.updateCreditRatio(actor,parsed.data.creditsPerYuan);return reply.code(204).send();});
+  app.post("/api/admin/credit-packs",async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;const parsed=creditPackSchema.safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"充值档位配置无效"}});await options.service.createCreditPack(actor,parsed.data);return reply.code(201).send();});
+  app.patch("/api/admin/credit-packs/:id",async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;const parsed=creditPackSchema.omit({id:true}).safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"充值档位配置无效"}});await options.service.updateCreditPack(actor,(req.params as any).id,parsed.data);return reply.code(204).send();});
+  app.delete("/api/admin/credit-packs/:id",async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;await options.service.deleteCreditPack(actor,(req.params as any).id);return reply.code(204).send();});
   app.get("/api/admin/ledger", async(req,reply)=>{if(!await guard(req,reply))return;return {entries:await options.service.listLedger()};});
 }

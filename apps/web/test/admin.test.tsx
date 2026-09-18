@@ -15,6 +15,9 @@ const {
   mockUpdateProvider,
   mockUpdateModel,
   mockUpdatePlan,
+  mockFetchCreditPackSettings,
+  mockUpdateCreditRatio,
+  mockCreateCreditPack,
   mockDiscoverProviderModels,
   mockCreateModel,
   mockReplace,
@@ -30,6 +33,9 @@ const {
   mockUpdateProvider: vi.fn(),
   mockUpdateModel: vi.fn(),
   mockUpdatePlan: vi.fn(),
+  mockFetchCreditPackSettings: vi.fn(),
+  mockUpdateCreditRatio: vi.fn(),
+  mockCreateCreditPack: vi.fn(),
   mockDiscoverProviderModels: vi.fn(),
   mockCreateModel: vi.fn(),
   mockReplace: vi.fn(),
@@ -66,6 +72,11 @@ vi.mock("../src/lib/admin-api", async () => {
     updateAdminProvider: mockUpdateProvider,
     updateAdminModel: mockUpdateModel,
     updateAdminPlan: mockUpdatePlan,
+    fetchAdminCreditPackSettings: mockFetchCreditPackSettings,
+    updateAdminCreditRatio: mockUpdateCreditRatio,
+    createAdminCreditPack: mockCreateCreditPack,
+    updateAdminCreditPack: vi.fn(),
+    deleteAdminCreditPack: vi.fn(),
     discoverAdminProviderModels: mockDiscoverProviderModels,
     createAdminModel: mockCreateModel,
   };
@@ -79,6 +90,7 @@ import OrdersPage from "../src/app/admin/orders/page";
 import PlansPage from "../src/app/admin/plans/page";
 import ProvidersPage from "../src/app/admin/providers/page";
 import UsersPage from "../src/app/admin/users/page";
+import CreditPacksPage from "../src/app/admin/credit-packs/page";
 import { AdminApiError } from "../src/lib/admin-api";
 
 const overview = {
@@ -131,6 +143,9 @@ describe("admin console", () => {
     mockUpdateProvider.mockResolvedValue(undefined);
     mockUpdateModel.mockResolvedValue(undefined);
     mockUpdatePlan.mockResolvedValue(undefined);
+    mockFetchCreditPackSettings.mockResolvedValue({ creditsPerYuan: 10, packs: [] });
+    mockUpdateCreditRatio.mockResolvedValue(undefined);
+    mockCreateCreditPack.mockResolvedValue(undefined);
     mockDiscoverProviderModels.mockResolvedValue({ models: [{ id: "gpt-image-1", ownedBy: "openai" }] });
     mockCreateModel.mockResolvedValue(undefined);
   });
@@ -286,5 +301,19 @@ describe("admin console", () => {
     fireEvent.change(await screen.findByLabelText("月付价格（元）"), { target: { value: "299" } });
     fireEvent.click(screen.getByRole("button", { name: "保存 Pro" }));
     await waitFor(() => expect(mockUpdatePlan).toHaveBeenCalledWith("admin-token", "pro", expect.objectContaining({ monthlyPriceFen: 29900 })));
+  });
+
+  it("configures the ratio and bonus credits for a recharge tier", async () => {
+    renderAdmin(<CreditPacksPage />);
+    fireEvent.change(await screen.findByLabelText("1 元兑换积分"), { target: { value: "12" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存兑换比例" }));
+    await waitFor(() => expect(mockUpdateCreditRatio).toHaveBeenCalledWith("admin-token", 12));
+    fireEvent.change(screen.getByLabelText("充值金额（元）"), { target: { value: "100" } });
+    fireEvent.change(screen.getByLabelText("赠送积分"), { target: { value: "200" } });
+    fireEvent.change(screen.getByLabelText("档位名称"), { target: { value: "100 元档" } });
+    fireEvent.change(screen.getByLabelText("Lemon Squeezy Variant ID"), { target: { value: "12345" } });
+    expect(screen.getByText(/实际到账 1,400 积分/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "新增充值档位" }));
+    await waitFor(() => expect(mockCreateCreditPack).toHaveBeenCalledWith("admin-token", expect.objectContaining({ amountFen: 10000, bonusCredits: 200 })));
   });
 });

@@ -18,6 +18,11 @@ function createApp(options?: { user?: { id: string; email?: string }; adminEmail
     updateModel: vi.fn().mockResolvedValue(undefined),
     listPlans: vi.fn().mockResolvedValue([]),
     updatePlan: vi.fn().mockResolvedValue(undefined),
+    getCreditPackSettings: vi.fn().mockResolvedValue({ creditsPerYuan: 10, packs: [] }),
+    updateCreditRatio: vi.fn().mockResolvedValue(undefined),
+    createCreditPack: vi.fn().mockResolvedValue(undefined),
+    updateCreditPack: vi.fn().mockResolvedValue(undefined),
+    deleteCreditPack: vi.fn().mockResolvedValue(undefined),
     listUsers: vi.fn().mockResolvedValue([]),
     adjustUser: vi.fn().mockResolvedValue(undefined),
     listOrders: vi.fn().mockResolvedValue([]),
@@ -90,5 +95,20 @@ describe("admin routes", () => {
     const response = await app.inject({ method: "POST", url: "/api/admin/models", payload });
     expect(response.statusCode).toBe(201);
     expect(service.createModel).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), { ...payload, generationType: "image" });
+  });
+
+  it("creates a recharge tier with a fixed base and bonus credit snapshot", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    const payload = { id: "launch-100", name: "100 元档", amountFen: 10000, bonusCredits: 200, lemonSqueezyVariantId: "12345", enabled: true };
+    const response = await app.inject({ method: "POST", url: "/api/admin/credit-packs", payload });
+    expect(response.statusCode).toBe(201);
+    expect(service.createCreditPack).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), payload);
+  });
+
+  it("updates the global RMB conversion ratio", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    const response = await app.inject({ method: "PATCH", url: "/api/admin/credit-packs/settings", payload: { creditsPerYuan: 12 } });
+    expect(response.statusCode).toBe(204);
+    expect(service.updateCreditRatio).toHaveBeenCalledWith(expect.any(Object), 12);
   });
 });
