@@ -12,6 +12,7 @@ const {
   mockSignInWithOAuth,
   mockReplace,
   mockSearchParams,
+  mockIsAdminSession,
 } = vi.hoisted(() => ({
   mockFetchViewer: vi.fn().mockResolvedValue({
     workspace: { id: "w1" },
@@ -33,11 +34,13 @@ const {
   mockSignInWithOAuth: vi.fn().mockResolvedValue({ error: null }),
   mockReplace: vi.fn(),
   mockSearchParams: vi.fn(() => new URLSearchParams()),
+  mockIsAdminSession: vi.fn().mockResolvedValue(false),
 }));
 
 vi.mock("../src/lib/server-api", () => ({
   fetchViewer: mockFetchViewer,
 }));
+vi.mock("../src/lib/admin-api", () => ({ isAdminSession: mockIsAdminSession }));
 
 vi.mock("../src/lib/supabase-browser", () => ({
   getSupabaseBrowserClient: vi.fn(() => ({
@@ -67,6 +70,7 @@ describe("Login page", () => {
       data: { subscription: { unsubscribe: vi.fn() } },
     });
     mockSearchParams.mockReturnValue(new URLSearchParams());
+    mockIsAdminSession.mockResolvedValue(false);
   });
 
   afterEach(() => {
@@ -146,7 +150,20 @@ describe("Login page", () => {
         password: "password-123",
       });
       expect(mockFetchViewer).toHaveBeenCalledWith("session-token");
+      expect(mockIsAdminSession).toHaveBeenCalledWith("session-token");
       expect(mockReplace).toHaveBeenCalledWith("/home");
+    });
+  });
+
+  it("redirects the configured administrator to the admin panel", async () => {
+    mockIsAdminSession.mockResolvedValue(true);
+    render(<AuthProvider><LoginPage /></AuthProvider>);
+    fireEvent.change(await screen.findByLabelText(/email/i), { target: { value: "pro@test.creative.com" } });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "opensourcecreative" } });
+    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/admin");
+      expect(mockFetchViewer).not.toHaveBeenCalled();
     });
   });
 });

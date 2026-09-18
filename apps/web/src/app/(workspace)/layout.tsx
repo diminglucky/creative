@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -9,22 +9,28 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { CreditHeaderButton } from "@/components/credits/credit-header-button";
 import { LoadingScreen } from "@/components/loading-screen";
 import { PageTransition } from "@/components/page-transition";
+import { isAdminSession } from "@/lib/admin-api";
 
 export default function WorkspaceLayout({
   children,
 }: {
   children: ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const router = useRouter();
+  const [checkingAccess, setCheckingAccess] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/login");
-    }
-  }, [loading, user, router]);
+    if (loading) return;
+    if (!user) { router.replace("/login"); setCheckingAccess(false); return; }
+    if (!session?.access_token) { setCheckingAccess(false); return; }
+    void isAdminSession(session.access_token).then((isAdmin) => {
+      if (isAdmin) router.replace("/admin");
+      else setCheckingAccess(false);
+    }).catch(() => setCheckingAccess(false));
+  }, [loading, user, session, router]);
 
-  if (loading) {
+  if (loading || checkingAccess) {
     return <LoadingScreen />;
   }
 

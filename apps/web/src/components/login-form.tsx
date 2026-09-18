@@ -10,6 +10,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { fetchViewer } from "../lib/server-api";
+import { isAdminSession } from "../lib/admin-api";
 import { getSupabaseBrowserClient } from "../lib/supabase-browser";
 
 const stagger = {
@@ -37,6 +38,10 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
 
   async function bootstrapWorkspace(accessToken: string) {
     try {
+      if (await isAdminSession(accessToken)) {
+        router.replace("/admin");
+        return;
+      }
       await fetchViewer(accessToken);
       router.replace("/home");
     } catch {

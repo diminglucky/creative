@@ -9,6 +9,15 @@ async function request<T>(token: string, path: string, init?: RequestInit): Prom
   return response.status === 204 ? undefined as T : await response.json() as T;
 }
 export const fetchAdminOverview = (t:string) => request<any>(t,"/overview");
+export async function isAdminSession(token: string): Promise<boolean> {
+  try {
+    await fetchAdminOverview(token);
+    return true;
+  } catch (error) {
+    if (error instanceof AdminApiError && (error.status === 401 || error.status === 403)) return false;
+    throw error;
+  }
+}
 export const fetchAdminProviders = (t:string) => request<any>(t,"/providers");
 export const fetchAdminModels = (t:string) => request<any>(t,"/models");
 export const fetchAdminPlans = (t:string) => request<any>(t,"/plans");

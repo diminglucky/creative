@@ -10,6 +10,7 @@ import {
   fetchViewer,
 } from "../../../lib/server-api";
 import { getSupabaseBrowserClient } from "../../../lib/supabase-browser";
+import { isAdminSession } from "../../../lib/admin-api";
 
 const CALLBACK_TIMEOUT_MS = 5_000;
 
@@ -58,6 +59,10 @@ function AuthCallbackPageContent() {
         }
 
         try {
+          if (await isAdminSession(data.session.access_token)) {
+            router.replace("/admin");
+            return;
+          }
           await fetchViewer(data.session.access_token);
         } catch (viewerError) {
           if (

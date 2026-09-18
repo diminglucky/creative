@@ -6,9 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mockReplace = vi.fn();
 let currentSearchParams = new URLSearchParams();
 
-const { mockExchangeCodeForSession, mockFetchViewer } = vi.hoisted(() => ({
+const { mockExchangeCodeForSession, mockFetchViewer, mockIsAdminSession } = vi.hoisted(() => ({
   mockExchangeCodeForSession: vi.fn(),
   mockFetchViewer: vi.fn(),
+  mockIsAdminSession: vi.fn().mockResolvedValue(false),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -31,12 +32,14 @@ vi.mock("../src/lib/server-api", () => ({
   ApiAuthError: class ApiAuthError extends Error {},
   fetchViewer: mockFetchViewer,
 }));
+vi.mock("../src/lib/admin-api", () => ({ isAdminSession: mockIsAdminSession }));
 
 import CallbackPage from "../src/app/auth/callback/page";
 
 describe("Auth callback page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsAdminSession.mockResolvedValue(false);
     currentSearchParams = new URLSearchParams();
   });
 
@@ -67,7 +70,19 @@ describe("Auth callback page", () => {
     await waitFor(() => {
       expect(mockExchangeCodeForSession).toHaveBeenCalledWith("magic-code");
       expect(mockFetchViewer).toHaveBeenCalledWith("viewer-token");
+      expect(mockIsAdminSession).toHaveBeenCalledWith("viewer-token");
       expect(mockReplace).toHaveBeenCalledWith("/home");
+    });
+  });
+
+  it("redirects an administrator without bootstrapping a workspace", async () => {
+    currentSearchParams = new URLSearchParams("code=admin-code");
+    mockIsAdminSession.mockResolvedValue(true);
+    mockExchangeCodeForSession.mockResolvedValue({ data: { session: { access_token: "admin-token", user: { id: "admin" } } }, error: null });
+    render(<CallbackPage />);
+    await waitFor(() => {
+      expect(mockReplace).toHaveBeenCalledWith("/admin");
+      expect(mockFetchViewer).not.toHaveBeenCalled();
     });
   });
 
