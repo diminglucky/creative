@@ -61,7 +61,3 @@ end $$;
 
 revoke all on function public.grant_credit_pack_purchase(uuid,text,text,integer) from public,anon,authenticated;
 grant execute on function public.grant_credit_pack_purchase(uuid,text,text,integer) to service_role;
-
-insert into public.credit_packs(id,name,credits,price_fen,sort_order,enabled)
-values ('credits-500','500 积分',500,4900,10,true),('credits-1200','1200 积分',1200,9900,20,true),('credits-3000','3000 积分',3000,19900,30,true)
-on conflict(id) do nothing;
