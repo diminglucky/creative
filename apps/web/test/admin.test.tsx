@@ -13,6 +13,8 @@ const {
   mockFetchOrders,
   mockFetchLedger,
   mockUpdateProvider,
+  mockUpdateModel,
+  mockUpdatePlan,
   mockReplace,
   mockUseAuth,
 } = vi.hoisted(() => ({
@@ -24,6 +26,8 @@ const {
   mockFetchOrders: vi.fn(),
   mockFetchLedger: vi.fn(),
   mockUpdateProvider: vi.fn(),
+  mockUpdateModel: vi.fn(),
+  mockUpdatePlan: vi.fn(),
   mockReplace: vi.fn(),
   mockUseAuth: vi.fn(),
 }));
@@ -56,6 +60,8 @@ vi.mock("../src/lib/admin-api", async () => {
     fetchAdminOrders: mockFetchOrders,
     fetchAdminLedger: mockFetchLedger,
     updateAdminProvider: mockUpdateProvider,
+    updateAdminModel: mockUpdateModel,
+    updateAdminPlan: mockUpdatePlan,
   };
 });
 
@@ -108,6 +114,8 @@ describe("admin console", () => {
     mockFetchOrders.mockResolvedValue({ orders: [] });
     mockFetchLedger.mockResolvedValue({ entries: [] });
     mockUpdateProvider.mockResolvedValue(undefined);
+    mockUpdateModel.mockResolvedValue(undefined);
+    mockUpdatePlan.mockResolvedValue(undefined);
   });
 
   afterEach(cleanup);
@@ -165,7 +173,10 @@ describe("admin console", () => {
 
     renderAdmin(<ProvidersPage />);
 
-    expect(await screen.findByDisplayValue("sk-proj-••••8Df2")).toBeDisabled();
+    const secret = await screen.findByLabelText(/new api secret/i);
+    expect(secret).toHaveAttribute("type", "password");
+    expect(secret).toHaveValue("");
+    expect(secret).toHaveAttribute("placeholder", "sk-proj-••••8Df2");
     expect(screen.queryByText("sk-proj-super-secret")).not.toBeInTheDocument();
   });
 
@@ -211,5 +222,22 @@ describe("admin console", () => {
   ])("renders the %s operational page", async (heading, page) => {
     renderAdmin(page);
     expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+  });
+
+  it("edits model prices instead of rendering raw JSON", async () => {
+    mockFetchModels.mockResolvedValue({ models: [{ model_id: "image/model", display_name: "Image Model", generation_type: "image", credit_price: 12, money_price_fen: 120, cost_price_fen: 40, minimum_plan: "starter", enabled: true }] });
+    renderAdmin(<ModelsPage />);
+    const credits = await screen.findByLabelText(/image model credit price/i);
+    fireEvent.change(credits, { target: { value: "15" } });
+    fireEvent.click(screen.getByRole("button", { name: /save image model/i }));
+    await waitFor(() => expect(mockUpdateModel).toHaveBeenCalledWith("admin-token", "image/model", expect.objectContaining({ creditPrice: 15 })));
+  });
+
+  it("edits subscription plan price and included credits", async () => {
+    mockFetchPlans.mockResolvedValue({ plans: [{ id: "pro", name: "Pro", description: "Professional", monthly_price_fen: 19900, yearly_price_fen: 199000, included_credits: 5000, benefits: [], enabled: true }] });
+    renderAdmin(<PlansPage />);
+    fireEvent.change(await screen.findByLabelText(/pro monthly price/i), { target: { value: "299" } });
+    fireEvent.click(screen.getByRole("button", { name: /save pro/i }));
+    await waitFor(() => expect(mockUpdatePlan).toHaveBeenCalledWith("admin-token", "pro", expect.objectContaining({ monthlyPriceFen: 29900 })));
   });
 });

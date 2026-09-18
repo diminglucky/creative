@@ -6,6 +6,7 @@ import type { RequestAuthenticator } from "../supabase/user.js";
 const providerUpdateSchema = z.object({ baseUrl: z.string().url().refine((v) => /^https?:\/\//i.test(v)), enabled: z.boolean(), secret: z.string().min(1).optional() });
 const modelUpdateSchema = z.object({ creditPrice: z.number().int().nonnegative(), moneyPriceFen: z.number().int().nonnegative(), costPriceFen: z.number().int().nonnegative().default(0), minimumPlan: z.string().min(1).default("free"), enabled: z.boolean() });
 const planUpdateSchema = z.object({ name: z.string().min(1), description: z.string(), monthlyPriceFen: z.number().int().nonnegative(), yearlyPriceFen: z.number().int().nonnegative(), includedCredits: z.number().int().nonnegative(), benefits: z.array(z.string()), enabled: z.boolean() });
+const userAdjustmentSchema = z.object({ paymentMethod: z.enum(["credits", "money"]), amount: z.number().int().refine((v) => v !== 0), reason: z.string().min(2).max(200) });
 
 export function registerAdminRoutes(app: FastifyInstance, options: { auth: RequestAuthenticator; adminEmail?: string; service: AdminService }) {
   const guard = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -23,6 +24,7 @@ export function registerAdminRoutes(app: FastifyInstance, options: { auth: Reque
   app.get("/api/admin/plans", async(req,reply)=>{if(!await guard(req,reply))return;return {plans:await options.service.listPlans()};});
   app.patch("/api/admin/plans/:id", async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;const parsed=planUpdateSchema.safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"Invalid plan settings"}});await options.service.updatePlan(actor,(req.params as any).id,parsed.data);return reply.code(204).send();});
   app.get("/api/admin/users", async(req,reply)=>{if(!await guard(req,reply))return;return {users:await options.service.listUsers()};});
+  app.post("/api/admin/users/:id/adjust",async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;const parsed=userAdjustmentSchema.safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"Invalid balance adjustment"}});await options.service.adjustUser(actor,(req.params as any).id,parsed.data);return reply.code(204).send();});
   app.get("/api/admin/orders", async(req,reply)=>{if(!await guard(req,reply))return;return {orders:await options.service.listOrders()};});
   app.get("/api/admin/ledger", async(req,reply)=>{if(!await guard(req,reply))return;return {entries:await options.service.listLedger()};});
 }

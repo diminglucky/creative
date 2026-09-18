@@ -18,4 +18,4 @@ export const fetchAdminLedger = (t:string) => request<any>(t,"/ledger");
 export const updateAdminProvider = (t:string,id:string,data:unknown) => request<void>(t,`/providers/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
 export const updateAdminModel = (t:string,id:string,data:unknown) => request<void>(t,`/models/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
 export const updateAdminPlan = (t:string,id:string,data:unknown) => request<void>(t,`/plans/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
-
+export const adjustAdminUser = (t:string,id:string,data:unknown) => request<void>(t,`/users/${encodeURIComponent(id)}/adjust`,{method:"POST",body:JSON.stringify(data)});

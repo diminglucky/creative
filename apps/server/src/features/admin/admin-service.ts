@@ -45,9 +45,8 @@ export function createAdminService(options: { getAdminClient: () => AdminSupabas
     async listPlans() { const { data, error } = await client().from("billing_plans").select("*").order("monthly_price_fen"); if (error) throw error; return data ?? []; },
     async updatePlan(actor: Actor, id: string, input: any) { const { error } = await client().from("billing_plans").update({ name: input.name, description: input.description, monthly_price_fen: input.monthlyPriceFen, yearly_price_fen: input.yearlyPriceFen, included_credits: input.includedCredits, benefits: input.benefits, enabled: input.enabled, updated_at: new Date().toISOString() }).eq("id",id); if(error) throw error; await audit(actor,"plan.updated","plan",id,input); },
     async listUsers() { const { data, error } = await client().from("profiles").select("id,email,display_name,created_at").order("created_at", { ascending: false }).limit(200); if(error) throw error; return data ?? []; },
-    async adjustUser(actor: Actor, id: string, input: any) { await audit(actor,"user.balance.adjusted","user",id,input); },
+    async adjustUser(actor: Actor, id: string, input: any) { const { error } = await client().rpc("adjust_wallet_balance", { p_user_id: id, p_payment_method: input.paymentMethod, p_amount: input.amount, p_reason: input.reason, p_actor_user_id: actor.id, p_actor_email: actor.email }); if(error) throw error; },
     async listOrders() { const { data, error } = await client().from("payment_orders").select("*").order("created_at",{ascending:false}).limit(200); if(error) throw error; return data ?? []; },
     async listLedger() { const { data, error } = await client().from("wallet_ledger").select("*").order("created_at",{ascending:false}).limit(500); if(error) throw error; return data ?? []; },
   };
 }
-

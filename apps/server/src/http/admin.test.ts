@@ -59,4 +59,11 @@ describe("admin routes", () => {
     expect(response.statusCode).toBe(400);
     expect(service.updateProvider).not.toHaveBeenCalled();
   });
+
+  it("adjusts a user's selected balance", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    const response = await app.inject({ method: "POST", url: "/api/admin/users/user-1/adjust", payload: { paymentMethod: "money", amount: 500, reason: "manual recharge" } });
+    expect(response.statusCode).toBe(204);
+    expect(service.adjustUser).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), "user-1", { paymentMethod: "money", amount: 500, reason: "manual recharge" });
+  });
 });
