@@ -192,3 +192,11 @@ insert into public.billing_plans(id,name,description,monthly_price_fen,yearly_pr
 values ('free','Free','基础体验',0,0,0,'[]'),('starter','Starter','入门套餐',6900,69000,1200,'[]'),('pro','Pro','专业套餐',19900,199000,5000,'[]')
 on conflict(id) do nothing;
 
+-- Preserve the two existing default generation paths on first deployment.
+-- Administrators can change both prices immediately from the model catalog.
+insert into public.generation_prices
+  (model_id, generation_type, display_name, provider_id, credit_price, money_price_fen, minimum_plan, enabled)
+values
+  ('black-forest-labs/flux-kontext-pro', 'image', 'FLUX Kontext Pro', 'replicate', 12, 120, 'starter', true),
+  ('google-official/veo-3.1-generate-preview', 'video', 'Veo 3.1', 'google', 80, 800, 'pro', true)
+on conflict (model_id, generation_type) do nothing;

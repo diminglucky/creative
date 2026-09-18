@@ -2,7 +2,11 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { randomUUID } from "node:crypto";
 
-import type { BackgroundJobStatus, BackgroundJobType, ImageQualityLevel } from "@creative/shared";
+import type {
+  BackgroundJobStatus,
+  BackgroundJobType,
+  ImageQualityLevel,
+} from "@creative/shared";
 import {
   applicationErrorResponseSchema,
   createImageJobRequestSchema,
@@ -27,7 +31,10 @@ import {
 } from "../features/credits/tier-guard.js";
 import type { ViewerService } from "../features/bootstrap/ensure-user-foundation.js";
 import type { RequestAuthenticator } from "../supabase/user.js";
-import { BillingServiceError, type BillingService } from "../features/billing/billing-service.js";
+import {
+  BillingServiceError,
+  type BillingService,
+} from "../features/billing/billing-service.js";
 
 export async function registerJobRoutes(
   app: FastifyInstance,
@@ -54,40 +61,67 @@ export async function registerJobRoutes(
       let creditsCost = 0;
 
       if (options.creditService && options.tierGuard) {
-        const sub = await options.creditService.getSubscription(viewer.workspace.id);
+        const sub = await options.creditService.getSubscription(
+          viewer.workspace.id,
+        );
         const planConfig = getPlanConfig(sub.plan);
         // Use the plan's max resolution as the quality for cost calculation
         const quality: ImageQualityLevel = planConfig.maxResolution;
         options.tierGuard.checkModelAccess(sub.plan, model);
         await options.tierGuard.checkConcurrency(viewer.workspace.id, sub.plan);
-        creditsCost = options.tierGuard.calculateCreditCost(model, "image_generation", { quality });
+        creditsCost = options.tierGuard.calculateCreditCost(
+          model,
+          "image_generation",
+          { quality },
+        );
       }
 
-      const charge = options.billingService ? await options.billingService.chargeGeneration({ workspaceId: viewer.workspace.id, userId: user.id, modelId: model, generationType: "image", idempotencyKey: `image-job:${randomUUID()}` }) : undefined;
-      const job = await options.jobService.createJob(user, {
-        workspaceId: viewer.workspace.id,
-        ...(payload.project_id !== undefined
-          ? { projectId: payload.project_id }
-          : {}),
-        ...(payload.canvas_id !== undefined
-          ? { canvasId: payload.canvas_id }
-          : {}),
-        ...(payload.session_id !== undefined
-          ? { sessionId: payload.session_id }
-          : {}),
-        ...(payload.thread_id !== undefined
-          ? { threadId: payload.thread_id }
-          : {}),
-        jobType: "image_generation",
-        payload: {
-          prompt: payload.prompt,
-          ...(payload.model !== undefined ? { model: payload.model } : {}),
-          ...(payload.aspect_ratio !== undefined
-            ? { aspect_ratio: payload.aspect_ratio }
+      const charge = options.billingService
+        ? await options.billingService.chargeGeneration({
+            workspaceId: viewer.workspace.id,
+            userId: user.id,
+            modelId: model,
+            generationType: "image",
+            idempotencyKey: `image-job:${randomUUID()}`,
+          })
+        : undefined;
+      let job;
+      try {
+        job = await options.jobService.createJob(user, {
+          workspaceId: viewer.workspace.id,
+          ...(payload.project_id !== undefined
+            ? { projectId: payload.project_id }
+            : {}),
+          ...(payload.canvas_id !== undefined
+            ? { canvasId: payload.canvas_id }
+            : {}),
+          ...(payload.session_id !== undefined
+            ? { sessionId: payload.session_id }
+            : {}),
+          ...(payload.thread_id !== undefined
+            ? { threadId: payload.thread_id }
+            : {}),
+          jobType: "image_generation",
+          payload: {
+            prompt: payload.prompt,
+            ...(payload.model !== undefined ? { model: payload.model } : {}),
+            ...(payload.aspect_ratio !== undefined
+              ? { aspect_ratio: payload.aspect_ratio }
               : {}),
-          ...(charge ? { billing_charge_id: charge.id } : {}),
-        },
-      });
+            ...(charge ? { billing_charge_id: charge.id } : {}),
+          },
+        });
+      } catch (error) {
+        if (charge && options.billingService)
+          await options.billingService
+            .refundGeneration({
+              chargeId: charge.id,
+              idempotencyKey: `refund:create:${charge.id}`,
+              reason: "job_create_failed",
+            })
+            .catch(() => undefined);
+        throw error;
+      }
 
       // Deduct credits after job creation (we need the job ID for tracking)
       if (!options.billingService && options.creditService && creditsCost > 0) {
@@ -132,7 +166,9 @@ export async function registerJobRoutes(
       let creditsCost = 0;
 
       if (options.creditService && options.tierGuard) {
-        const sub = await options.creditService.getSubscription(viewer.workspace.id);
+        const sub = await options.creditService.getSubscription(
+          viewer.workspace.id,
+        );
         options.tierGuard.checkModelAccess(sub.plan, model);
         await options.tierGuard.checkConcurrency(viewer.workspace.id, sub.plan);
         creditsCost = options.tierGuard.calculateCreditCost(
@@ -142,34 +178,73 @@ export async function registerJobRoutes(
         );
       }
 
-      const charge = options.billingService ? await options.billingService.chargeGeneration({ workspaceId: viewer.workspace.id, userId: user.id, modelId: model, generationType: "video", durationSeconds: payload.duration, quality: payload.resolution, idempotencyKey: `video-job:${randomUUID()}` }) : undefined;
-      const job = await options.jobService.createJob(user, {
-        workspaceId: viewer.workspace.id,
-        ...(payload.project_id !== undefined
-          ? { projectId: payload.project_id }
-          : {}),
-        ...(payload.canvas_id !== undefined
-          ? { canvasId: payload.canvas_id }
-          : {}),
-        ...(payload.session_id !== undefined
-          ? { sessionId: payload.session_id }
-          : {}),
-        ...(payload.thread_id !== undefined
-          ? { threadId: payload.thread_id }
-          : {}),
-        jobType: "video_generation",
-        payload: {
-          prompt: payload.prompt,
-          ...(payload.model !== undefined ? { model: payload.model } : {}),
-          ...(payload.duration !== undefined ? { duration: payload.duration } : {}),
-          ...(payload.resolution !== undefined ? { resolution: payload.resolution } : {}),
-          ...(payload.aspect_ratio !== undefined ? { aspect_ratio: payload.aspect_ratio } : {}),
-          ...(payload.input_images !== undefined ? { input_images: payload.input_images } : {}),
-          ...(payload.input_video !== undefined ? { input_video: payload.input_video } : {}),
-          ...(payload.enable_audio !== undefined ? { enable_audio: payload.enable_audio } : {}),
-          ...(charge ? { billing_charge_id: charge.id } : {}),
-        },
-      });
+      const charge = options.billingService
+        ? await options.billingService.chargeGeneration({
+            workspaceId: viewer.workspace.id,
+            userId: user.id,
+            modelId: model,
+            generationType: "video",
+            ...(payload.duration !== undefined
+              ? { durationSeconds: payload.duration }
+              : {}),
+            ...(payload.resolution !== undefined
+              ? { quality: payload.resolution }
+              : {}),
+            idempotencyKey: `video-job:${randomUUID()}`,
+          })
+        : undefined;
+      let job;
+      try {
+        job = await options.jobService.createJob(user, {
+          workspaceId: viewer.workspace.id,
+          ...(payload.project_id !== undefined
+            ? { projectId: payload.project_id }
+            : {}),
+          ...(payload.canvas_id !== undefined
+            ? { canvasId: payload.canvas_id }
+            : {}),
+          ...(payload.session_id !== undefined
+            ? { sessionId: payload.session_id }
+            : {}),
+          ...(payload.thread_id !== undefined
+            ? { threadId: payload.thread_id }
+            : {}),
+          jobType: "video_generation",
+          payload: {
+            prompt: payload.prompt,
+            ...(payload.model !== undefined ? { model: payload.model } : {}),
+            ...(payload.duration !== undefined
+              ? { duration: payload.duration }
+              : {}),
+            ...(payload.resolution !== undefined
+              ? { resolution: payload.resolution }
+              : {}),
+            ...(payload.aspect_ratio !== undefined
+              ? { aspect_ratio: payload.aspect_ratio }
+              : {}),
+            ...(payload.input_images !== undefined
+              ? { input_images: payload.input_images }
+              : {}),
+            ...(payload.input_video !== undefined
+              ? { input_video: payload.input_video }
+              : {}),
+            ...(payload.enable_audio !== undefined
+              ? { enable_audio: payload.enable_audio }
+              : {}),
+            ...(charge ? { billing_charge_id: charge.id } : {}),
+          },
+        });
+      } catch (error) {
+        if (charge && options.billingService)
+          await options.billingService
+            .refundGeneration({
+              chargeId: charge.id,
+              idempotencyKey: `refund:create:${charge.id}`,
+              reason: "job_create_failed",
+            })
+            .catch(() => undefined);
+        throw error;
+      }
 
       // Deduct credits after job creation
       if (!options.billingService && options.creditService && creditsCost > 0) {
@@ -221,7 +296,10 @@ export async function registerJobRoutes(
       if (!user) return sendUnauthenticated(reply);
 
       const query = request.query as { status?: string; job_type?: string };
-      const filters: { status?: BackgroundJobStatus; jobType?: BackgroundJobType } = {};
+      const filters: {
+        status?: BackgroundJobStatus;
+        jobType?: BackgroundJobType;
+      } = {};
       if (query.status) filters.status = query.status as BackgroundJobStatus;
       if (query.job_type) filters.jobType = query.job_type as BackgroundJobType;
       const jobs = await options.jobService.listJobs(user, filters);
@@ -285,6 +363,13 @@ function sendJobError(
     );
   }
   if (error instanceof CreditServiceError) {
+    return reply.code(error.statusCode).send(
+      applicationErrorResponseSchema.parse({
+        error: { code: error.code, message: error.message },
+      }),
+    );
+  }
+  if (error instanceof BillingServiceError) {
     return reply.code(error.statusCode).send(
       applicationErrorResponseSchema.parse({
         error: { code: error.code, message: error.message },

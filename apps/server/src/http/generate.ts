@@ -13,7 +13,10 @@ import {
 import { generateImage } from "../generation/image-generation.js";
 import { resolveImageProviderName } from "../generation/providers/registry.js";
 import type { CreditService } from "../features/credits/credit-service.js";
-import { BillingServiceError, type BillingService } from "../features/billing/billing-service.js";
+import {
+  BillingServiceError,
+  type BillingService,
+} from "../features/billing/billing-service.js";
 import { GenerationError } from "../generation/utils.js";
 import { CreditServiceError } from "../features/credits/credit-service.js";
 import type { TierGuard } from "../features/credits/tier-guard.js";
@@ -22,7 +25,10 @@ import type { JobService } from "../features/jobs/job-service.js";
 import { JobServiceError } from "../features/jobs/job-service.js";
 import type { ViewerService } from "../features/bootstrap/ensure-user-foundation.js";
 import type { UploadService } from "../features/uploads/upload-service.js";
-import type { AuthenticatedUser, RequestAuthenticator } from "../supabase/user.js";
+import type {
+  AuthenticatedUser,
+  RequestAuthenticator,
+} from "../supabase/user.js";
 
 const generateImageRequestSchema = z.object({
   prompt: z.string().min(1),
@@ -88,20 +94,36 @@ export async function registerGenerateRoutes(
       let creditsCost = 0;
 
       if (options.creditService && options.tierGuard) {
-        const sub = await options.creditService.getSubscription(viewer.workspace.id);
+        const sub = await options.creditService.getSubscription(
+          viewer.workspace.id,
+        );
         const quality: ImageQualityLevel = payload.quality ?? "hd";
         options.tierGuard.checkModelAccess(sub.plan, model);
         // Throws TierGuardError (resolution_not_allowed) if plan doesn't allow this quality
         options.tierGuard.checkResolution(sub.plan, quality);
         await options.tierGuard.checkConcurrency(viewer.workspace.id, sub.plan);
-        creditsCost = options.tierGuard.calculateCreditCost(model, "image_generation", { quality });
+        creditsCost = options.tierGuard.calculateCreditCost(
+          model,
+          "image_generation",
+          { quality },
+        );
 
         if (options.billingService) {
-          const charge = await options.billingService.chargeGeneration({ workspaceId: viewer.workspace.id, userId: user.id, modelId: model, generationType: "image", quality, idempotencyKey: `direct-image:${randomUUID()}` });
+          const charge = await options.billingService.chargeGeneration({
+            workspaceId: viewer.workspace.id,
+            userId: user.id,
+            modelId: model,
+            generationType: "image",
+            quality,
+            idempotencyKey: `direct-image:${randomUUID()}`,
+          });
           chargeId = charge.id;
         } else if (creditsCost > 0) {
           await options.creditService.deductCredits(
-            viewer.workspace.id, user.id, creditsCost, undefined,
+            viewer.workspace.id,
+            user.id,
+            creditsCost,
+            undefined,
             `Direct image generation: ${model}`,
           );
         }
@@ -133,8 +155,21 @@ export async function registerGenerateRoutes(
         height: result.height,
       });
     } catch (error) {
-      if (chargeId && options.billingService && !(error instanceof GenerationError && error.code === "safety_filter")) {
-        await options.billingService.refundGeneration({ chargeId, idempotencyKey: `refund:${chargeId}`, reason: error instanceof GenerationError ? error.code : "generation_failed" }).catch(()=>undefined);
+      if (
+        chargeId &&
+        options.billingService &&
+        !(error instanceof GenerationError && error.code === "safety_filter")
+      ) {
+        await options.billingService
+          .refundGeneration({
+            chargeId,
+            idempotencyKey: `refund:${chargeId}`,
+            reason:
+              error instanceof GenerationError
+                ? error.code
+                : "generation_failed",
+          })
+          .catch(() => undefined);
       }
       // Handle tier/credit errors
       if (error instanceof TierGuardError) {
@@ -152,7 +187,13 @@ export async function registerGenerateRoutes(
         );
       }
       if (error instanceof BillingServiceError) {
-        return reply.code(error.statusCode).send(applicationErrorResponseSchema.parse({ error: { code: error.code, message: error.message } }));
+        return reply
+          .code(error.statusCode)
+          .send(
+            applicationErrorResponseSchema.parse({
+              error: { code: error.code, message: error.message },
+            }),
+          );
       }
 
       const message =
@@ -213,7 +254,8 @@ export async function registerGenerateRoutes(
         applicationErrorResponseSchema.parse({
           error: {
             code: "service_unavailable",
-            message: "Video generation is not available (job service not configured).",
+            message:
+              "Video generation is not available (job service not configured).",
           },
         }),
       );
@@ -251,29 +293,54 @@ export async function registerGenerateRoutes(
 
       let chargeId: string | undefined;
       if (options.billingService) {
-        const charge = await options.billingService.chargeGeneration({ workspaceId, userId: user.id, modelId: model, generationType: "video", durationSeconds: payload.duration, quality: payload.resolution, idempotencyKey: `direct-video:${randomUUID()}` });
+        const charge = await options.billingService.chargeGeneration({
+          workspaceId,
+          userId: user.id,
+          modelId: model,
+          generationType: "video",
+          ...(payload.duration !== undefined
+            ? { durationSeconds: payload.duration }
+            : {}),
+          ...(payload.resolution !== undefined
+            ? { quality: payload.resolution }
+            : {}),
+          idempotencyKey: `direct-video:${randomUUID()}`,
+        });
         chargeId = charge.id;
         creditsCost = charge.creditsCharged;
       }
 
       // ── Create job ──
-      const job = await options.jobService.createJob(user, {
-        workspaceId,
-        jobType: "video_generation",
-        payload: {
-          prompt: payload.prompt,
-          model,
-          ...(payload.duration != null ? { duration: payload.duration } : {}),
-          ...(payload.resolution ? { resolution: payload.resolution } : {}),
-          ...(payload.aspectRatio
-            ? { aspect_ratio: payload.aspectRatio }
-            : {}),
-          ...(payload.inputImages?.length
-            ? { input_images: payload.inputImages }
+      let job;
+      try {
+        job = await options.jobService.createJob(user, {
+          workspaceId,
+          jobType: "video_generation",
+          payload: {
+            prompt: payload.prompt,
+            model,
+            ...(payload.duration != null ? { duration: payload.duration } : {}),
+            ...(payload.resolution ? { resolution: payload.resolution } : {}),
+            ...(payload.aspectRatio
+              ? { aspect_ratio: payload.aspectRatio }
               : {}),
-          ...(chargeId ? { billing_charge_id: chargeId } : {}),
-        },
-      });
+            ...(payload.inputImages?.length
+              ? { input_images: payload.inputImages }
+              : {}),
+            ...(chargeId ? { billing_charge_id: chargeId } : {}),
+          },
+        });
+      } catch (error) {
+        if (chargeId && options.billingService)
+          await options.billingService
+            .refundGeneration({
+              chargeId,
+              idempotencyKey: `refund:create:${chargeId}`,
+              reason: "job_create_failed",
+            })
+            .catch(() => undefined);
+        throw error;
+      }
 
       // ── Deduct credits BEFORE generation ──
       if (!options.billingService && options.creditService && creditsCost > 0) {
@@ -339,7 +406,13 @@ export async function registerGenerateRoutes(
         );
       }
       if (error instanceof BillingServiceError) {
-        return reply.code(error.statusCode).send(applicationErrorResponseSchema.parse({ error: { code: error.code, message: error.message } }));
+        return reply
+          .code(error.statusCode)
+          .send(
+            applicationErrorResponseSchema.parse({
+              error: { code: error.code, message: error.message },
+            }),
+          );
       }
       if (error instanceof JobServiceError) {
         return reply.code(error.statusCode).send(
@@ -439,7 +512,10 @@ async function downloadAndUpload(
   const buffer = Buffer.from(await response.arrayBuffer());
 
   const ext = mimeType === "image/webp" ? "webp" : "png";
-  const slug = prompt.slice(0, 40).replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const slug = prompt
+    .slice(0, 40)
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
   const fileName = `gen-${slug}-${Date.now()}.${ext}`;
 
   const viewer = await deps.viewerService.ensureViewer(user);
