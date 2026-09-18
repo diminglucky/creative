@@ -16,6 +16,20 @@ export type SubscriptionStatus = {
   customerPortalUrl: string | null;
 };
 
+export type CreditPack = { id: string; name: string; credits: number; priceFen: number };
+
+export async function getCreditPacks(accessToken: string): Promise<CreditPack[]> {
+  const response = await fetch(`${getServerBaseUrl()}/api/payments/credit-packs`, { headers: authHeaders(accessToken) });
+  if (!response.ok) return handleErrorResponse(response);
+  return ((await response.json()) as { packs: CreditPack[] }).packs;
+}
+
+export async function createCreditCheckout(accessToken: string, packId: string): Promise<{ checkoutUrl: string }> {
+  const response = await fetch(`${getServerBaseUrl()}/api/payments/credit-checkout`, { method: "POST", headers: authJsonHeaders(accessToken), body: JSON.stringify({ packId }) });
+  if (!response.ok) return handleErrorResponse(response);
+  return (await response.json()) as { checkoutUrl: string };
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 
 function authHeaders(accessToken: string): Record<string, string> {

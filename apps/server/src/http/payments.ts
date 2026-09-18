@@ -23,6 +23,25 @@ export async function registerPaymentRoutes(
     viewerService: ViewerService;
   },
 ) {
+  app.get("/api/payments/credit-packs", async (request, reply) => {
+    try {
+      const user = await options.auth.authenticate(request);
+      if (!user) return sendUnauthenticated(reply);
+      return reply.code(200).send({ packs: await options.paymentService.listCreditPacks() });
+    } catch (error) { return sendPaymentError(error, reply, "checkout_failed"); }
+  });
+
+  app.post("/api/payments/credit-checkout", async (request, reply) => {
+    try {
+      const user = await options.auth.authenticate(request);
+      if (!user) return sendUnauthenticated(reply);
+      const packId = (request.body as { packId?: unknown })?.packId;
+      if (typeof packId !== "string" || !packId.trim()) return reply.code(400).send(applicationErrorResponseSchema.parse({ error: { code: "invalid_request", message: "A valid credit pack is required." } }));
+      const viewer = await options.viewerService.ensureViewer(user);
+      return reply.code(200).send(await options.paymentService.createCreditCheckout(viewer.workspace.id, packId));
+    } catch (error) { return sendPaymentError(error, reply, "checkout_failed"); }
+  });
+
   // POST /api/payments/checkout — create a checkout session
   app.post("/api/payments/checkout", async (request, reply) => {
     try {

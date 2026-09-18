@@ -52,6 +52,7 @@ export type LemonSqueezyClient = {
     variantId: string,
     workspaceId: string,
     redirectUrl?: string,
+    customData?: Record<string, string>,
   ): Promise<CheckoutResult>;
 
   getSubscription(
@@ -109,7 +110,7 @@ export function createLemonSqueezyClient(options: {
   }
 
   return {
-    async createCheckout(variantId, workspaceId, redirectUrl) {
+    async createCheckout(variantId, workspaceId, redirectUrl, customData) {
       const payload = {
         data: {
           type: "checkouts",
@@ -117,6 +118,7 @@ export function createLemonSqueezyClient(options: {
             checkout_data: {
               custom: {
                 workspace_id: workspaceId,
+                ...customData,
               },
             },
             checkout_options: {

@@ -1,7 +1,35 @@
 "use client";
-import {useState} from "react";
-import type {PaymentPreference} from "@creative/shared";
-import type {WalletInfo} from "@/lib/wallet-api";
-import {Button} from "@/components/ui/button";
-export function WalletSection({wallet,onSave}:{wallet:WalletInfo;onSave:(preference:PaymentPreference)=>Promise<unknown>}){const[primaryMethod,setPrimaryMethod]=useState(wallet.preference.primaryMethod);const[autoFallback,setAutoFallback]=useState(wallet.preference.autoFallback);const[saving,setSaving]=useState(false);const[saved,setSaved]=useState(false);async function save(){setSaving(true);setSaved(false);try{await onSave({primaryMethod,autoFallback});setSaved(true)}finally{setSaving(false)}}return <section className="flex flex-col gap-5"><div><h2 className="text-base font-semibold">Wallet</h2><p className="mt-1 text-sm text-muted-foreground">Each generation uses one balance in full. Balances are never combined.</p></div><div className="grid grid-cols-2 gap-3"><div className="rounded-md border p-4"><p className="text-xs text-muted-foreground">Credits</p><p className="mt-1 text-xl font-semibold">{wallet.creditBalance.toLocaleString()}</p></div><div className="rounded-md border p-4"><p className="text-xs text-muted-foreground">RMB balance</p><p className="mt-1 text-xl font-semibold">¥{(wallet.moneyBalanceFen/100).toFixed(2)}</p></div></div><fieldset className="flex flex-col gap-3"><legend className="mb-2 text-sm font-medium">Payment priority</legend><label className="flex items-center gap-2 text-sm"><input aria-label="Credits first" type="radio" name="payment-priority" checked={primaryMethod==="credits"} onChange={()=>setPrimaryMethod("credits")}/>Credits first</label><label className="flex items-center gap-2 text-sm"><input aria-label="RMB balance first" type="radio" name="payment-priority" checked={primaryMethod==="money"} onChange={()=>setPrimaryMethod("money")}/>RMB balance first</label></fieldset><label className="flex items-start gap-2 text-sm"><input aria-label="Automatic fallback" type="checkbox" checked={autoFallback} onChange={e=>setAutoFallback(e.target.checked)}/><span>Automatic fallback<span className="block text-xs text-muted-foreground">When the preferred balance is insufficient, try the other balance. Disabled by default.</span></span></label>{saved?<p className="text-sm">Payment preference saved.</p>:null}<Button disabled={saving} onClick={save}>{saving?"Saving...":"Save payment preference"}</Button></section>}
 
+import { useEffect, useState } from "react";
+import type { WalletInfo } from "@/lib/wallet-api";
+import { createCreditCheckout, getCreditPacks, type CreditPack } from "@/lib/payments-api";
+
+export function WalletSection({ wallet, accessToken }: { wallet: WalletInfo; accessToken?: string }) {
+  const [packs, setPacks] = useState<CreditPack[]>([]);
+  useEffect(() => { if (accessToken) void getCreditPacks(accessToken).then(setPacks).catch(() => setPacks([])); }, [accessToken]);
+  async function buy(packId: string) {
+    if (!accessToken) return;
+    const { checkoutUrl } = await createCreditCheckout(accessToken, packId);
+    window.location.assign(checkoutUrl);
+  }
+  return (
+    <section className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-base font-semibold">积分账户</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          所有生成统一使用积分，扣费成功后才会提交生成任务。
+        </p>
+      </div>
+      <div className="rounded-md border p-4">
+        <p className="text-xs text-muted-foreground">可用积分</p>
+        <p className="mt-1 text-xl font-semibold">
+          {wallet.creditBalance.toLocaleString()}
+        </p>
+      </div>
+      <div className="rounded-md border bg-muted/30 p-4 text-sm text-muted-foreground">
+        订阅套餐积分按月发放；额外购买的积分永久有效。
+      </div>
+      {packs.length ? <div><h3 className="mb-3 text-sm font-medium">购买永久积分</h3><div className="grid gap-3">{packs.map((pack) => <div key={pack.id} className="flex items-center justify-between rounded-md border p-4"><div><p className="font-medium">{pack.name}</p><p className="text-sm text-muted-foreground">¥{(pack.priceFen / 100).toFixed(2)} · 永久有效</p></div><button type="button" className="rounded-md bg-foreground px-3 py-2 text-sm text-background" onClick={() => void buy(pack.id)}>购买</button></div>)}</div></div> : null}
+    </section>
+  );
+}

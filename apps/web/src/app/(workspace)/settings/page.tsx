@@ -32,7 +32,7 @@ const tabs: Array<{ id: SettingsTab; label: string }> = [
 
 export default function SettingsPage() {
   const { session } = useAuth();
-  const { wallet, save: saveWallet } = useWallet(session?.access_token);
+  const { wallet } = useWallet(session?.access_token);
   const searchParams = useSearchParams();
 
   const initialTab = (searchParams.get("tab") as SettingsTab) ?? "profile";
@@ -159,7 +159,7 @@ export default function SettingsPage() {
             fetchModels={stableFetchModels}
           />
         ) : activeTab === "wallet" ? (
-          wallet ? <WalletSection wallet={wallet} onSave={saveWallet} /> : null
+          wallet ? <WalletSection wallet={wallet} {...(session?.access_token ? { accessToken: session.access_token } : {})} /> : null
         ) : activeTab === "usage" ? (
           <CreditUsageHistory />
         ) : (

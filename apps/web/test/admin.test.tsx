@@ -241,9 +241,8 @@ describe("admin console", () => {
     fireEvent.click(await screen.findByRole("button", { name: "获取 OpenAI 模型" }));
     expect(await screen.findByText("gpt-image-1")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("gpt-image-1 积分价格"), { target: { value: "15" } });
-    fireEvent.change(screen.getByLabelText("gpt-image-1 人民币价格"), { target: { value: "2.99" } });
     fireEvent.click(screen.getByRole("button", { name: "添加 gpt-image-1" }));
-    await waitFor(() => expect(mockCreateModel).toHaveBeenCalledWith("admin-token", expect.objectContaining({ providerId: "openai", modelId: "gpt-image-1", creditPrice: 15, moneyPriceFen: 299, enabled: true })));
+    await waitFor(() => expect(mockCreateModel).toHaveBeenCalledWith("admin-token", expect.objectContaining({ providerId: "openai", modelId: "gpt-image-1", creditPrice: 15, enabled: true })));
   });
 
   it("offers model discovery and pricing for other configured providers", async () => {
@@ -275,7 +274,7 @@ describe("admin console", () => {
   it("edits model prices instead of rendering raw JSON", async () => {
     mockFetchModels.mockResolvedValue({ models: [{ model_id: "image/model", display_name: "Image Model", generation_type: "image", credit_price: 12, money_price_fen: 120, cost_price_fen: 40, minimum_plan: "starter", enabled: true }] });
     renderAdmin(<ModelsPage />);
-    const credits = await screen.findByLabelText("积分价格");
+    const credits = await screen.findByLabelText("每次生成积分");
     fireEvent.change(credits, { target: { value: "15" } });
     fireEvent.click(screen.getByRole("button", { name: "保存 Image Model" }));
     await waitFor(() => expect(mockUpdateModel).toHaveBeenCalledWith("admin-token", "image/model", expect.objectContaining({ creditPrice: 15 })));

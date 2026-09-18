@@ -44,6 +44,8 @@ export type SubscriptionStatus = {
 export type VariantMap = Record<string, string>;
 
 export type PaymentService = {
+  listCreditPacks(): Promise<Array<{ id: string; name: string; credits: number; priceFen: number }>>;
+  createCreditCheckout(workspaceId: string, packId: string): Promise<{ checkoutUrl: string }>;
   createCheckout(
     workspaceId: string,
     planId: SubscriptionPlan,
@@ -69,7 +71,7 @@ export type PaymentService = {
 export type WebhookPayload = {
   meta: {
     event_name: string;
-    custom_data?: { workspace_id?: string };
+    custom_data?: { workspace_id?: string; credit_pack_id?: string };
   };
   data: {
     id: string;
@@ -128,6 +130,18 @@ export function createPaymentService(options: {
   }
 
   return {
+    async listCreditPacks() {
+      const { data, error } = await (getAdminClient() as any).from("credit_packs").select("id,name,credits,price_fen").eq("enabled", true).not("lemon_squeezy_variant_id", "is", null).order("sort_order");
+      if (error) throw new PaymentServiceError("checkout_failed", "Failed to load credit packs.", 500);
+      return (data ?? []).map((pack: any) => ({ id: pack.id, name: pack.name, credits: pack.credits, priceFen: pack.price_fen }));
+    },
+
+    async createCreditCheckout(workspaceId, packId) {
+      const { data: pack, error } = await (getAdminClient() as any).from("credit_packs").select("id,lemon_squeezy_variant_id").eq("id", packId).eq("enabled", true).maybeSingle();
+      if (error || !pack?.lemon_squeezy_variant_id) throw new PaymentServiceError("variant_not_found", "Credit pack is unavailable or has no Lemon Squeezy variant configured.", 400);
+      return lemonSqueezy.createCheckout(String(pack.lemon_squeezy_variant_id), workspaceId, `${webOrigin}/settings?tab=wallet&checkout=success`, { credit_pack_id: pack.id });
+    },
+
     async createCheckout(workspaceId, planId, billingPeriod) {
       const variantId = lookupVariant(planId, billingPeriod);
       const redirectUrl = `${webOrigin}/settings?checkout=success`;
@@ -147,6 +161,19 @@ export function createPaymentService(options: {
       const subscriptionId = payload.data.id;
 
       switch (eventName) {
+        case "order_created": {
+          const packId = payload.meta.custom_data?.credit_pack_id;
+          if (!workspaceId || !packId || attrs.status !== "paid") return;
+          const amountFen = Number(attrs.total ?? attrs.total_formatted ?? 0);
+          const { error } = await (getAdminClient() as any).rpc("grant_credit_pack_purchase", {
+            p_workspace_id: workspaceId,
+            p_pack_id: packId,
+            p_provider_order_id: String(attrs.order_id || payload.data.id),
+            p_amount_fen: Number.isFinite(amountFen) ? amountFen : 0,
+          });
+          if (error) throw new PaymentServiceError("webhook_processing_failed", "Failed to grant purchased credits.", 500);
+          break;
+        }
         case "subscription_created": {
           if (!workspaceId) {
             console.warn("[PaymentService] subscription_created missing workspace_id in custom_data");

@@ -4,11 +4,11 @@ import type { AdminService } from "../features/admin/admin-service.js";
 import type { RequestAuthenticator } from "../supabase/user.js";
 
 const providerUpdateSchema = z.object({ baseUrl: z.string().url().refine((v) => /^https?:\/\//i.test(v)), enabled: z.boolean(), secret: z.string().min(1).optional() });
-const modelUpdateSchema = z.object({ creditPrice: z.number().int().nonnegative(), moneyPriceFen: z.number().int().nonnegative(), costPriceFen: z.number().int().nonnegative().default(0), minimumPlan: z.string().min(1).default("free"), enabled: z.boolean() });
+const modelUpdateSchema = z.object({ creditPrice: z.number().int().nonnegative(), costPriceFen: z.number().int().nonnegative().default(0), minimumPlan: z.string().min(1).default("free"), enabled: z.boolean() });
 const planUpdateSchema = z.object({ name: z.string().min(1), description: z.string(), monthlyPriceFen: z.number().int().nonnegative(), yearlyPriceFen: z.number().int().nonnegative(), includedCredits: z.number().int().nonnegative(), benefits: z.array(z.string()), enabled: z.boolean() });
-const userAdjustmentSchema = z.object({ paymentMethod: z.enum(["credits", "money"]), amount: z.number().int().refine((v) => v !== 0), reason: z.string().min(2).max(200) });
+const userAdjustmentSchema = z.object({ amount: z.number().int().refine((v) => v !== 0), reason: z.string().min(2).max(200) });
 const providerDiscoverySchema = z.object({ baseUrl: z.string().url().refine((v) => /^https?:\/\//i.test(v)), secret: z.string().min(1).optional() });
-const modelCreateSchema = z.object({ providerId: z.string().min(1), modelId: z.string().min(1), displayName: z.string().min(1), creditPrice: z.number().int().nonnegative(), moneyPriceFen: z.number().int().nonnegative(), costPriceFen: z.number().int().nonnegative().default(0), minimumPlan: z.string().min(1).default("free"), enabled: z.boolean().default(true) });
+const modelCreateSchema = z.object({ providerId: z.string().min(1), modelId: z.string().min(1), displayName: z.string().min(1), creditPrice: z.number().int().nonnegative(), costPriceFen: z.number().int().nonnegative().default(0), minimumPlan: z.string().min(1).default("free"), enabled: z.boolean().default(true) });
 
 export function registerAdminRoutes(app: FastifyInstance, options: { auth: RequestAuthenticator; adminEmail?: string; service: AdminService }) {
   const guard = async (request: FastifyRequest, reply: FastifyReply) => {
