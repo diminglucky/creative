@@ -49,7 +49,23 @@ export function createAdminService(options: { getAdminClient: () => AdminSupabas
       if (error) throw error;
       await audit(actor, "provider.updated", "provider", id, { baseUrl: input.baseUrl, enabled: input.enabled, secretChanged: Boolean(input.secret) });
     },
+    async discoverProviderModels(id: string, input: { baseUrl: string; secret?: string | undefined }) {
+      if (id !== "openai") throw new Error("Only OpenAI-compatible discovery is supported.");
+      let secret = input.secret;
+      if (!secret) {
+        const { data, error } = await client().from("platform_providers").select("secret_ciphertext").eq("id", id).single();
+        if (error) throw error;
+        secret = data?.secret_ciphertext;
+      }
+      if (!secret) throw new Error("API key is required to fetch models.");
+      const endpoint = `${input.baseUrl.replace(/\/$/, "")}/models`;
+      const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${secret}`, Accept: "application/json" } });
+      if (!response.ok) throw new Error(`Failed to fetch models: ${response.status}`);
+      const payload = await response.json() as { data?: Array<{ id?: string; owned_by?: string }> };
+      return (payload.data ?? []).filter((model) => typeof model.id === "string" && model.id.length > 0).map((model) => ({ id: model.id!, ownedBy: model.owned_by ?? "" }));
+    },
     async listModels() { const { data, error } = await client().from("generation_prices").select("*").order("generation_type").order("display_name"); if (error) throw error; return data ?? []; },
+    async createModel(actor: Actor, input: any) { const { error } = await client().from("generation_prices").upsert({ model_id: input.modelId, generation_type: input.generationType, display_name: input.displayName, provider_id: input.providerId, credit_price: input.creditPrice, money_price_fen: input.moneyPriceFen, cost_price_fen: input.costPriceFen, minimum_plan: input.minimumPlan, enabled: input.enabled, updated_at: new Date().toISOString() }, { onConflict: "model_id,generation_type" }); if(error)throw error;await audit(actor,"model.created","model",input.modelId,input); },
     async updateModel(actor: Actor, id: string, input: any) { const { error } = await client().from("generation_prices").update({ credit_price: input.creditPrice, money_price_fen: input.moneyPriceFen, cost_price_fen: input.costPriceFen, minimum_plan: input.minimumPlan, enabled: input.enabled, updated_at: new Date().toISOString() }).eq("model_id", id); if (error) throw error; await audit(actor,"model.price.updated","model",id,input); },
     async listPlans() { const { data, error } = await client().from("billing_plans").select("*").order("monthly_price_fen"); if (error) throw error; return data ?? []; },
     async updatePlan(actor: Actor, id: string, input: any) { const { error } = await client().from("billing_plans").update({ name: input.name, description: input.description, monthly_price_fen: input.monthlyPriceFen, yearly_price_fen: input.yearlyPriceFen, included_credits: input.includedCredits, benefits: input.benefits, enabled: input.enabled, updated_at: new Date().toISOString() }).eq("id",id); if(error) throw error; await audit(actor,"plan.updated","plan",id,input); },

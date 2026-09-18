@@ -10,8 +10,14 @@ import {
   type VideoResolution,
 } from "@creative/shared";
 
-import { generateImage } from "../generation/image-generation.js";
-import { resolveImageProviderName } from "../generation/providers/registry.js";
+import {
+  generateImageForModel,
+} from "../generation/image-generation.js";
+import type { DynamicOpenAIImageService } from "../generation/dynamic-openai-image-service.js";
+import {
+  canAccessImageModelPlan,
+  type ImageModelCatalog,
+} from "../features/billing/image-model-catalog.js";
 import type { CreditService } from "../features/credits/credit-service.js";
 import { shouldRefundGenerationFailure } from "../features/billing/generation-billing.js";
 import {
@@ -55,6 +61,8 @@ export async function registerGenerateRoutes(
     creditService?: CreditService;
     jobService?: JobService;
     tierGuard?: TierGuard;
+    dynamicImageService: DynamicOpenAIImageService;
+    imageModelCatalog: ImageModelCatalog;
     uploadService: UploadService;
     viewerService: ViewerService;
   },
@@ -100,7 +108,19 @@ export async function registerGenerateRoutes(
           viewer.workspace.id,
         );
         const quality: ImageQualityLevel = payload.quality ?? "hd";
-        options.tierGuard.checkModelAccess(sub.plan, model);
+        const configuredModel = (await options.imageModelCatalog.listEnabledImageModels())
+          .find((entry) => entry.id === model);
+        if (configuredModel) {
+          if (!canAccessImageModelPlan(sub.plan, configuredModel.minTier)) {
+            throw new TierGuardError(
+              "model_not_accessible",
+              `Your ${sub.plan} plan does not have access to model "${model}".`,
+              403,
+            );
+          }
+        } else {
+          options.tierGuard.checkModelAccess(sub.plan, model);
+        }
         // Throws TierGuardError (resolution_not_allowed) if plan doesn't allow this quality
         options.tierGuard.checkResolution(sub.plan, quality);
         await options.tierGuard.checkConcurrency(viewer.workspace.id, sub.plan);
@@ -131,13 +151,12 @@ export async function registerGenerateRoutes(
         }
       }
 
-      const providerName = resolveImageProviderName(model);
-      const result = await generateImage(providerName, {
+      const { image: result } = await generateImageForModel({
         prompt: payload.prompt,
         model,
         aspectRatio: payload.aspectRatio ?? "1:1",
         ...(payload.quality ? { quality: payload.quality } : {}),
-      });
+      }, options.dynamicImageService);
       providerOutputReceived = true;
 
       // Download and persist to Supabase Storage

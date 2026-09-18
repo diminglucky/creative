@@ -11,6 +11,10 @@ import {
 import { createAgentRunService } from "./agent/runtime.js";
 import { registerAllProviders } from "./generation/providers/register-all.js";
 import {
+  createDynamicOpenAIImageService,
+  type DynamicOpenAIImageService,
+} from "./generation/dynamic-openai-image-service.js";
+import {
   createViewerService,
   type ViewerService,
 } from "./features/bootstrap/ensure-user-foundation.js";
@@ -64,6 +68,10 @@ import { createLemonSqueezyClient } from "./features/payments/lemon-squeezy-clie
 import { createAdminService, type AdminService } from "./features/admin/admin-service.js";
 import { createBillingService, type BillingService } from "./features/billing/billing-service.js";
 import {
+  createImageModelCatalog,
+  type ImageModelCatalog,
+} from "./features/billing/image-model-catalog.js";
+import {
   createPaymentService,
   buildVariantMap,
   type PaymentService,
@@ -116,6 +124,7 @@ export type BuildAppOptions = {
   creditService?: CreditService;
   env?: Partial<ServerEnv>;
   jobService?: JobService;
+  imageModelCatalog?: ImageModelCatalog;
   paymentService?: PaymentService;
   tierGuard?: TierGuard;
   uploadService?: UploadService;
@@ -124,6 +133,7 @@ export type BuildAppOptions = {
   settingsService?: SettingsService;
   threadService?: ThreadService;
   viewerService?: ViewerService;
+  dynamicImageService?: DynamicOpenAIImageService;
 };
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -201,6 +211,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     options.adminService ?? createAdminService({ getAdminClient });
   const billingService =
     options.billingService ?? createBillingService({ getAdminClient });
+  const dynamicImageService =
+    options.dynamicImageService ?? createDynamicOpenAIImageService({ getAdminClient });
+  const imageModelCatalog =
+    options.imageModelCatalog ?? createImageModelCatalog({ getAdminClient });
   const tierGuard =
     options.tierGuard ?? createTierGuard({ getAdminClient });
 
@@ -309,7 +323,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     viewerService,
   });
   void registerModelRoutes(app, env);
-  void registerImageModelRoutes(app, { auth, creditService, viewerService });
+  void registerImageModelRoutes(app, {
+    auth,
+    creditService,
+    imageModelCatalog,
+    viewerService,
+  });
   void registerVideoModelRoutes(app, { auth, creditService, viewerService });
   void registerChatRoutes(app, {
     auth,
@@ -324,6 +343,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     auth,
     creditService,
     billingService,
+    dynamicImageService,
+    imageModelCatalog,
     uploadService,
     viewerService,
     ...(jobService ? { jobService } : {}),

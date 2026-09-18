@@ -460,6 +460,7 @@ export const annotatedModelSchema = z.object({
   provider: z.string(),
   accessible: z.boolean(),
   creditCost: z.number().int(),
+  moneyPriceFen: z.number().int().nonnegative().optional(),
   minTier: subscriptionPlanSchema,
   capabilities: z
     .object({

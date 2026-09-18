@@ -25,6 +25,8 @@ export const fetchAdminUsers = (t:string) => request<any>(t,"/users");
 export const fetchAdminOrders = (t:string) => request<any>(t,"/orders");
 export const fetchAdminLedger = (t:string) => request<any>(t,"/ledger");
 export const updateAdminProvider = (t:string,id:string,data:unknown) => request<void>(t,`/providers/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
+export const discoverAdminProviderModels = (t:string,id:string,data:unknown) => request<any>(t,`/providers/${encodeURIComponent(id)}/models/discover`,{method:"POST",body:JSON.stringify(data)});
+export const createAdminModel = (t:string,data:unknown) => request<void>(t,"/models",{method:"POST",body:JSON.stringify(data)});
 export const updateAdminModel = (t:string,id:string,data:unknown) => request<void>(t,`/models/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
 export const updateAdminPlan = (t:string,id:string,data:unknown) => request<void>(t,`/plans/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
 export const adjustAdminUser = (t:string,id:string,data:unknown) => request<void>(t,`/users/${encodeURIComponent(id)}/adjust`,{method:"POST",body:JSON.stringify(data)});

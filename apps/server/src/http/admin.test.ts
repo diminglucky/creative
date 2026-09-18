@@ -12,7 +12,9 @@ function createApp(options?: { user?: { id: string; email?: string }; adminEmail
     }),
     listProviders: vi.fn().mockResolvedValue([]),
     updateProvider: vi.fn().mockResolvedValue(undefined),
+    discoverProviderModels: vi.fn().mockResolvedValue([{ id: "gpt-image-1", ownedBy: "openai" }]),
     listModels: vi.fn().mockResolvedValue([]),
+    createModel: vi.fn().mockResolvedValue(undefined),
     updateModel: vi.fn().mockResolvedValue(undefined),
     listPlans: vi.fn().mockResolvedValue([]),
     updatePlan: vi.fn().mockResolvedValue(undefined),
@@ -65,5 +67,21 @@ describe("admin routes", () => {
     const response = await app.inject({ method: "POST", url: "/api/admin/users/user-1/adjust", payload: { paymentMethod: "money", amount: 500, reason: "manual recharge" } });
     expect(response.statusCode).toBe(204);
     expect(service.adjustUser).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), "user-1", { paymentMethod: "money", amount: 500, reason: "manual recharge" });
+  });
+
+  it("discovers models from an OpenAI-compatible provider", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    const response = await app.inject({ method: "POST", url: "/api/admin/providers/openai/models/discover", payload: { baseUrl: "https://gateway.example.com/v1", secret: "sk-test" } });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ models: [{ id: "gpt-image-1", ownedBy: "openai" }] });
+    expect(service.discoverProviderModels).toHaveBeenCalledWith("openai", { baseUrl: "https://gateway.example.com/v1", secret: "sk-test" });
+  });
+
+  it("imports an image model with billing prices", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    const payload = { providerId: "openai", modelId: "gpt-image-1", displayName: "GPT Image 1", creditPrice: 12, moneyPriceFen: 199, costPriceFen: 80, minimumPlan: "free", enabled: true };
+    const response = await app.inject({ method: "POST", url: "/api/admin/models", payload });
+    expect(response.statusCode).toBe(201);
+    expect(service.createModel).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), { ...payload, generationType: "image" });
   });
 });

@@ -15,6 +15,8 @@ const {
   mockUpdateProvider,
   mockUpdateModel,
   mockUpdatePlan,
+  mockDiscoverProviderModels,
+  mockCreateModel,
   mockReplace,
   mockUseAuth,
 } = vi.hoisted(() => ({
@@ -28,6 +30,8 @@ const {
   mockUpdateProvider: vi.fn(),
   mockUpdateModel: vi.fn(),
   mockUpdatePlan: vi.fn(),
+  mockDiscoverProviderModels: vi.fn(),
+  mockCreateModel: vi.fn(),
   mockReplace: vi.fn(),
   mockUseAuth: vi.fn(),
 }));
@@ -62,6 +66,8 @@ vi.mock("../src/lib/admin-api", async () => {
     updateAdminProvider: mockUpdateProvider,
     updateAdminModel: mockUpdateModel,
     updateAdminPlan: mockUpdatePlan,
+    discoverAdminProviderModels: mockDiscoverProviderModels,
+    createAdminModel: mockCreateModel,
   };
 });
 
@@ -125,6 +131,8 @@ describe("admin console", () => {
     mockUpdateProvider.mockResolvedValue(undefined);
     mockUpdateModel.mockResolvedValue(undefined);
     mockUpdatePlan.mockResolvedValue(undefined);
+    mockDiscoverProviderModels.mockResolvedValue({ models: [{ id: "gpt-image-1", ownedBy: "openai" }] });
+    mockCreateModel.mockResolvedValue(undefined);
   });
 
   afterEach(cleanup);
@@ -225,6 +233,17 @@ describe("admin console", () => {
       });
     });
     expect(await screen.findByText("供应商配置已保存。")).toBeInTheDocument();
+  });
+
+  it("discovers and imports an OpenAI-compatible image model with prices", async () => {
+    mockFetchProviders.mockResolvedValue({ providers: [{ id: "openai", name: "OpenAI", baseUrl: "https://gateway.example.com/v1", enabled: true, secretMask: "••••test", hasSecret: true }] });
+    renderAdmin(<ProvidersPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "获取 OpenAI 模型" }));
+    expect(await screen.findByText("gpt-image-1")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("gpt-image-1 积分价格"), { target: { value: "15" } });
+    fireEvent.change(screen.getByLabelText("gpt-image-1 人民币价格"), { target: { value: "2.99" } });
+    fireEvent.click(screen.getByRole("button", { name: "添加 gpt-image-1" }));
+    await waitFor(() => expect(mockCreateModel).toHaveBeenCalledWith("admin-token", expect.objectContaining({ providerId: "openai", modelId: "gpt-image-1", creditPrice: 15, moneyPriceFen: 299, enabled: true })));
   });
 
   it.each([
