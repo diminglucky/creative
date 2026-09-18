@@ -1,10 +1,11 @@
 import type { AdminSupabaseClient } from "../../supabase/admin.js";
+import type { ProviderSecretCrypto } from "../../security/provider-secret-crypto.js";
 
 type Actor = { id: string; email: string };
 
 export type AdminService = ReturnType<typeof createAdminService>;
 
-export function createAdminService(options: { getAdminClient: () => AdminSupabaseClient }) {
+export function createAdminService(options: { getAdminClient: () => AdminSupabaseClient; secretCrypto?: ProviderSecretCrypto }) {
   const client = () => options.getAdminClient() as any;
   const audit = async (actor: Actor, action: string, resourceType: string, resourceId: string, details: unknown) => {
     const { error } = await client().from("admin_audit_logs").insert({ actor_user_id: actor.id, actor_email: actor.email, action, resource_type: resourceType, resource_id: resourceId, details });
@@ -40,11 +41,14 @@ export function createAdminService(options: { getAdminClient: () => AdminSupabas
     async listProviders() {
       const { data, error } = await client().from("platform_providers").select("id,name,base_url,secret_ciphertext,enabled,updated_at").order("name");
       if (error) throw error;
-      return (data ?? []).map((p: any) => ({ id: p.id, name: p.name, baseUrl: p.base_url, enabled: p.enabled, hasSecret: Boolean(p.secret_ciphertext), secretMask: p.secret_ciphertext ? `••••${p.secret_ciphertext.slice(-4)}` : "", updatedAt: p.updated_at }));
+      return (data ?? []).map((p: any) => ({ id: p.id, name: p.name, baseUrl: p.base_url, enabled: p.enabled, hasSecret: Boolean(p.secret_ciphertext), secretMask: p.secret_ciphertext ? (options.secretCrypto?.mask(p.secret_ciphertext) ?? "已配置") : "", updatedAt: p.updated_at }));
     },
     async updateProvider(actor: Actor, id: string, input: any) {
       const values: any = { base_url: input.baseUrl, enabled: input.enabled, updated_at: new Date().toISOString() };
-      if (input.secret) values.secret_ciphertext = input.secret;
+      if (input.secret) {
+        if (!options.secretCrypto) throw new Error("Provider secret encryption is not configured.");
+        values.secret_ciphertext = options.secretCrypto.encrypt(input.secret);
+      }
       const { error } = await client().from("platform_providers").update(values).eq("id", id);
       if (error) throw error;
       await audit(actor, "provider.updated", "provider", id, { baseUrl: input.baseUrl, enabled: input.enabled, secretChanged: Boolean(input.secret) });
@@ -55,7 +59,9 @@ export function createAdminService(options: { getAdminClient: () => AdminSupabas
       if (!secret) {
         const { data, error } = await client().from("platform_providers").select("secret_ciphertext").eq("id", id).single();
         if (error) throw error;
-        secret = data?.secret_ciphertext;
+        secret = data?.secret_ciphertext
+          ? (options.secretCrypto?.decrypt(data.secret_ciphertext) ?? data.secret_ciphertext)
+          : undefined;
       }
       if (!secret) throw new Error("API key is required to fetch models.");
       const endpoint = `${input.baseUrl.replace(/\/$/, "")}/models`;

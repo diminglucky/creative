@@ -103,6 +103,7 @@ import { CanvasEventBuffer } from "./ws/event-buffer.js";
 import { ConnectionManager } from "./ws/connection-manager.js";
 import { registerWsRoute } from "./ws/handler.js";
 import { createAdminSupabaseClient } from "./supabase/admin.js";
+import { createProviderSecretCrypto } from "./security/provider-secret-crypto.js";
 import {
   createSupabaseRequestAuthenticator,
   createUserSupabaseClientFactory,
@@ -173,6 +174,9 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   };
   const viewerService =
     options.viewerService ?? createViewerService({ getAdminClient });
+  const providerSecretCrypto = createProviderSecretCrypto(
+    env.providerSecretsEncryptionKey,
+  );
   const projectService =
     options.projectService ??
     createProjectService({ createUserClient, viewerService });
@@ -208,11 +212,11 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const creditService =
     options.creditService ?? createCreditService({ getAdminClient });
   const adminService =
-    options.adminService ?? createAdminService({ getAdminClient });
+    options.adminService ?? createAdminService({ getAdminClient, secretCrypto: providerSecretCrypto });
   const billingService =
     options.billingService ?? createBillingService({ getAdminClient });
   const dynamicImageService =
-    options.dynamicImageService ?? createDynamicOpenAIImageService({ getAdminClient });
+    options.dynamicImageService ?? createDynamicOpenAIImageService({ getAdminClient, secretCrypto: providerSecretCrypto });
   const imageModelCatalog =
     options.imageModelCatalog ?? createImageModelCatalog({ getAdminClient });
   const tierGuard =

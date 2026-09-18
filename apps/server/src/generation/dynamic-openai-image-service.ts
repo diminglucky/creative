@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 
 import type { AdminSupabaseClient } from "../supabase/admin.js";
+import type { ProviderSecretCrypto } from "../security/provider-secret-crypto.js";
 import type { GeneratedImage, ImageGenerateParams } from "./types.js";
 
 type DynamicOpenAIImageErrorCode =
@@ -62,6 +63,7 @@ export type DynamicOpenAIImageService = {
 
 export function createDynamicOpenAIImageService(options: {
   getAdminClient: () => AdminSupabaseClient;
+  secretCrypto?: ProviderSecretCrypto;
   createOpenAIClient?: (config: OpenAIClientConfig) => OpenAIImageClient;
 }): DynamicOpenAIImageService {
   const createOpenAIClient =
@@ -118,7 +120,9 @@ export function createDynamicOpenAIImageService(options: {
       const baseURL = providerResult.data.base_url;
       const storedCredential = providerResult.data.secret_ciphertext;
       const credential =
-        typeof storedCredential === "string" ? storedCredential.trim() : "";
+        typeof storedCredential === "string"
+          ? (options.secretCrypto?.decrypt(storedCredential) ?? storedCredential).trim()
+          : "";
       if (!credential) {
         throw new DynamicOpenAIImageError(
           "provider_credentials_missing",

@@ -374,6 +374,7 @@ Creative/
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-only) |
 | `SUPABASE_DB_URL` | PostgreSQL connection string (for PGMQ) |
 | `SUPABASE_PROJECT_ID` | Supabase project reference ID |
+| `PROVIDER_SECRETS_ENCRYPTION_KEY` | Server-only AES-256-GCM master key for provider API keys (32 random bytes, Base64) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL (exposed to frontend) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (exposed to frontend) |
 

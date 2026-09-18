@@ -1,6 +1,7 @@
 import { createDynamicOpenAIImageService } from "../../../generation/dynamic-openai-image-service.js";
 import { generateImageForModel } from "../../../generation/image-generation.js";
 import type { GeneratedImage } from "../../../generation/types.js";
+import { createProviderSecretCrypto } from "../../../security/provider-secret-crypto.js";
 import { markProviderOutputReceived } from "../../billing/generation-billing.js";
 import { applyWatermark } from "../../credits/watermark.js";
 // @credits-system — Image generation executor: applies watermark for free-tier users
@@ -49,9 +50,12 @@ registerExecutor(
 
     // Resolve provider dynamically from model ID via registry
     const model = payload.model ?? "black-forest-labs/flux-kontext-pro";
-    const dynamicImageService = createDynamicOpenAIImageService({
-      getAdminClient: ctx.getAdminClient,
-    });
+  const dynamicImageService = createDynamicOpenAIImageService({
+    getAdminClient: ctx.getAdminClient,
+    secretCrypto: createProviderSecretCrypto(
+      ctx.env.providerSecretsEncryptionKey,
+    ),
+  });
 
     // Renew VT every 60s (half of the 120s image queue VT) to prevent
     // the message from becoming visible while we are still processing.
