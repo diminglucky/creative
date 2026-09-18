@@ -134,7 +134,7 @@ describe("admin console", () => {
 
     renderAdmin(<AdminPage />);
 
-    expect(screen.getByText(/checking administrator access/i)).toBeInTheDocument();
+    expect(screen.getByText("正在验证管理员权限...")).toBeInTheDocument();
   });
 
   it("blocks authenticated non-admin users", async () => {
@@ -144,7 +144,7 @@ describe("admin console", () => {
 
     renderAdmin(<AdminPage />);
 
-    expect(await screen.findByRole("heading", { name: /access denied/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "无访问权限" })).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalledWith("/login");
   });
 
@@ -173,7 +173,7 @@ describe("admin console", () => {
 
     renderAdmin(<ProvidersPage />);
 
-    const secret = await screen.findByLabelText(/new api secret/i);
+    const secret = await screen.findByLabelText("更新 API 密钥");
     expect(secret).toHaveAttribute("type", "password");
     expect(secret).toHaveValue("");
     expect(secret).toHaveAttribute("placeholder", "sk-proj-••••8Df2");
@@ -196,29 +196,29 @@ describe("admin console", () => {
     });
 
     renderAdmin(<ProvidersPage />);
-    const url = await screen.findByLabelText(/openai api base url/i);
+    const url = await screen.findByLabelText("OpenAI API 基础地址");
     fireEvent.change(url, { target: { value: "not-a-url" } });
-    fireEvent.click(screen.getByRole("button", { name: /save openai/i }));
-    expect(await screen.findByText(/enter a valid http/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "保存 OpenAI" }));
+    expect(await screen.findByText("请输入有效的 HTTP 或 HTTPS 地址。")).toBeInTheDocument();
     expect(mockUpdateProvider).not.toHaveBeenCalled();
 
     fireEvent.change(url, { target: { value: "https://gateway.example.com/v1" } });
-    fireEvent.click(screen.getByRole("button", { name: /save openai/i }));
+    fireEvent.click(screen.getByRole("button", { name: "保存 OpenAI" }));
     await waitFor(() => {
       expect(mockUpdateProvider).toHaveBeenCalledWith("admin-token", "openai", {
         baseUrl: "https://gateway.example.com/v1",
         enabled: true,
       });
     });
-    expect(await screen.findByText(/provider saved/i)).toBeInTheDocument();
+    expect(await screen.findByText("供应商配置已保存。")).toBeInTheDocument();
   });
 
   it.each([
-    ["Models", <ModelsPage />],
-    ["Plans", <PlansPage />],
-    ["Users", <UsersPage />],
-    ["Orders", <OrdersPage />],
-    ["Ledger", <LedgerPage />],
+    ["模型定价", <ModelsPage />],
+    ["订阅套餐", <PlansPage />],
+    ["用户余额", <UsersPage />],
+    ["充值订单", <OrdersPage />],
+    ["资金账本", <LedgerPage />],
   ])("renders the %s operational page", async (heading, page) => {
     renderAdmin(page);
     expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
@@ -227,17 +227,17 @@ describe("admin console", () => {
   it("edits model prices instead of rendering raw JSON", async () => {
     mockFetchModels.mockResolvedValue({ models: [{ model_id: "image/model", display_name: "Image Model", generation_type: "image", credit_price: 12, money_price_fen: 120, cost_price_fen: 40, minimum_plan: "starter", enabled: true }] });
     renderAdmin(<ModelsPage />);
-    const credits = await screen.findByLabelText(/image model credit price/i);
+    const credits = await screen.findByLabelText("积分价格");
     fireEvent.change(credits, { target: { value: "15" } });
-    fireEvent.click(screen.getByRole("button", { name: /save image model/i }));
+    fireEvent.click(screen.getByRole("button", { name: "保存 Image Model" }));
     await waitFor(() => expect(mockUpdateModel).toHaveBeenCalledWith("admin-token", "image/model", expect.objectContaining({ creditPrice: 15 })));
   });
 
   it("edits subscription plan price and included credits", async () => {
     mockFetchPlans.mockResolvedValue({ plans: [{ id: "pro", name: "Pro", description: "Professional", monthly_price_fen: 19900, yearly_price_fen: 199000, included_credits: 5000, benefits: [], enabled: true }] });
     renderAdmin(<PlansPage />);
-    fireEvent.change(await screen.findByLabelText(/pro monthly price/i), { target: { value: "299" } });
-    fireEvent.click(screen.getByRole("button", { name: /save pro/i }));
+    fireEvent.change(await screen.findByLabelText("月付价格（元）"), { target: { value: "299" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存 Pro" }));
     await waitFor(() => expect(mockUpdatePlan).toHaveBeenCalledWith("admin-token", "pro", expect.objectContaining({ monthlyPriceFen: 29900 })));
   });
 });

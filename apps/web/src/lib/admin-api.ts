@@ -5,7 +5,7 @@ export class AdminApiError extends Error {
 }
 async function request<T>(token: string, path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${getServerBaseUrl()}/api/admin${path}`, { ...init, headers: { Authorization: `Bearer ${token}`, ...(init?.body ? { "content-type": "application/json" } : {}), ...init?.headers } });
-  if (!response.ok) { const body=await response.json().catch(()=>null); throw new AdminApiError(response.status,body?.error?.code ?? "admin_request_failed",body?.error?.message ?? "Admin request failed"); }
+  if (!response.ok) { const body=await response.json().catch(()=>null); throw new AdminApiError(response.status,body?.error?.code ?? "admin_request_failed",body?.error?.message ?? "管理员操作失败"); }
   return response.status === 204 ? undefined as T : await response.json() as T;
 }
 export const fetchAdminOverview = (t:string) => request<any>(t,"/overview");
