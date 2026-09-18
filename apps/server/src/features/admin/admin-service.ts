@@ -18,6 +18,12 @@ export function createAdminService(options: { getAdminClient: () => AdminSupabas
         client().from("admin_audit_logs").select("id,actor_email,action,resource_type,resource_id,created_at").order("created_at", { ascending: false }).limit(10),
         client().from("profiles").select("id", { count: "exact", head: true }),
       ]);
+      const auditRows = audits.data ?? [];
+      const userIds = [...new Set(auditRows.filter((row: any) => row.resource_type === "user").map((row: any) => row.resource_id))];
+      const profileResult = userIds.length
+        ? await client().from("profiles").select("id,email,display_name").in("id", userIds)
+        : { data: [] };
+      const profiles = new Map<string, { id: string; email: string; display_name: string | null }>((profileResult.data ?? []).map((profile: any) => [profile.id, profile]));
       return {
         metrics: {
           revenueFen: (orders.data ?? []).filter((o: any) => o.status === "paid").reduce((n: number, o: any) => n + o.amount_fen, 0),
@@ -25,7 +31,10 @@ export function createAdminService(options: { getAdminClient: () => AdminSupabas
           generationCount: (charges.data ?? []).length,
           activeUsers: users.count ?? 0,
         },
-        recentAudit: (audits.data ?? []).map((row: any) => ({ id: row.id, actorEmail: row.actor_email, action: row.action, resourceType: row.resource_type, resourceId: row.resource_id, createdAt: row.created_at })),
+        recentAudit: auditRows.map((row: any) => {
+          const targetUser = row.resource_type === "user" ? profiles.get(row.resource_id) : undefined;
+          return { id: row.id, actorEmail: row.actor_email, action: row.action, resourceType: row.resource_type, resourceId: row.resource_id, ...(targetUser ? { targetUser: { id: targetUser.id, email: targetUser.email, displayName: targetUser.display_name } } : {}), createdAt: row.created_at };
+        }),
       };
     },
     async listProviders() {

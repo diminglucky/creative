@@ -91,6 +91,15 @@ const overview = {
       resourceId: "imagen-3",
       createdAt: "2026-09-17T08:30:00.000Z",
     },
+    {
+      id: "audit-2",
+      actorEmail: "root@example.com",
+      action: "user.balance.adjusted",
+      resourceType: "user",
+      resourceId: "341a9606-2cc8-40a8-b4a6-a557b49954fb",
+      targetUser: { id: "341a9606-2cc8-40a8-b4a6-a557b49954fb", email: "free@test.creative.com", displayName: "Free Tester" },
+      createdAt: "2026-09-17T08:31:00.000Z",
+    },
   ],
 };
 
@@ -153,8 +162,11 @@ describe("admin console", () => {
 
     expect(await screen.findByText("¥1,289.00")).toBeInTheDocument();
     expect(screen.getByText("更新模型定价")).toBeInTheDocument();
-    expect(screen.getByText("操作人：root@example.com")).toBeInTheDocument();
+    expect(screen.getAllByText("操作人：root@example.com")).toHaveLength(2);
     expect(screen.getByText("模型：imagen-3")).toBeInTheDocument();
+    expect(screen.getByText("用户：Free Tester")).toBeInTheDocument();
+    expect(screen.getByText("邮箱：free@test.creative.com")).toBeInTheDocument();
+    expect(screen.getByText("用户 ID：341a9606-2cc8-40a8-b4a6-a557b49954fb")).toBeInTheDocument();
     expect(screen.queryByText("model.price.updated")).not.toBeInTheDocument();
   });
 
