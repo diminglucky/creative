@@ -23,6 +23,10 @@ import {
   type BillingService,
 } from "./features/billing/billing-service.js";
 import {
+  refundBilledGenerationJob,
+  shouldRefundGenerationFailure,
+} from "./features/billing/generation-billing.js";
+import {
   getExecutor,
   type ExecutorContext,
 } from "./features/jobs/job-executor.js";
@@ -220,6 +224,13 @@ async function processMessage(
       `No executor registered for ${jobType}`,
     );
     await ctx.pgmq.archive(queue, msg.msg_id);
+    await refundBillingChargeForJob(
+      jobId,
+      ctx,
+      billingService,
+      "no_executor",
+      tag,
+    );
     return;
   }
 
@@ -228,7 +239,11 @@ async function processMessage(
     await ctx.jobService.incrementAttempt(jobId);
 
   // Mark running
-  await ctx.jobService.markRunning(jobId);
+  const claimed = await ctx.jobService.markRunning(jobId);
+  if (!claimed) {
+    await ctx.pgmq.archive(queue, msg.msg_id);
+    return;
+  }
 
   try {
     const result = await executor(
@@ -260,7 +275,7 @@ async function processMessage(
 
       // A provider safety rejection is a billable response. Other terminal
       // failures produced no usable output and are refunded to the original balance.
-      if (errorCode !== "safety_filter") {
+      if (shouldRefundGenerationFailure(err)) {
         await refundDeadLetteredJob(
           jobId,
           ctx,
@@ -280,6 +295,36 @@ async function processMessage(
         `${tag} Job ${jobId} failed (attempt ${attempt_count}/${max_attempts}) +${Date.now() - startTime}ms: ${errorMessage}`,
       );
     }
+  }
+}
+
+async function refundBillingChargeForJob(
+  jobId: string,
+  ctx: ExecutorContext,
+  billingService: BillingService,
+  reason: string,
+  tag: string,
+) {
+  try {
+    const admin = ctx.getAdminClient();
+    const { data: jobRow } = await admin
+      .from("background_jobs")
+      .select("payload")
+      .eq("id", jobId)
+      .single();
+    if (!jobRow) return;
+
+    const refunded = await refundBilledGenerationJob({
+      billingService,
+      jobId,
+      payload: (jobRow.payload ?? {}) as Record<string, unknown>,
+      reason,
+    });
+    if (refunded) {
+      console.log(`${tag} Refunded billing charge for job ${jobId}`);
+    }
+  } catch (refundErr) {
+    console.error(`${tag} Failed to refund billing charge for job ${jobId}:`, refundErr);
   }
 }
 

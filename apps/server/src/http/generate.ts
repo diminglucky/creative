@@ -13,6 +13,7 @@ import {
 import { generateImage } from "../generation/image-generation.js";
 import { resolveImageProviderName } from "../generation/providers/registry.js";
 import type { CreditService } from "../features/credits/credit-service.js";
+import { shouldRefundGenerationFailure } from "../features/billing/generation-billing.js";
 import {
   BillingServiceError,
   type BillingService,
@@ -73,6 +74,7 @@ export async function registerGenerateRoutes(
 
     let payload: z.infer<typeof generateImageRequestSchema>;
     let chargeId: string | undefined;
+    let providerOutputReceived = false;
     try {
       payload = generateImageRequestSchema.parse(request.body);
     } catch {
@@ -136,6 +138,7 @@ export async function registerGenerateRoutes(
         aspectRatio: payload.aspectRatio ?? "1:1",
         ...(payload.quality ? { quality: payload.quality } : {}),
       });
+      providerOutputReceived = true;
 
       // Download and persist to Supabase Storage
       const { signedUrl, assetId } = await downloadAndUpload(
@@ -158,7 +161,8 @@ export async function registerGenerateRoutes(
       if (
         chargeId &&
         options.billingService &&
-        !(error instanceof GenerationError && error.code === "safety_filter")
+        !providerOutputReceived &&
+        shouldRefundGenerationFailure(error)
       ) {
         await options.billingService
           .refundGeneration({

@@ -1,6 +1,7 @@
 import { registerExecutor, type ExecutorContext } from "../job-executor.js";
 import { generateVideo } from "../../../generation/video-generation.js";
 import { resolveVideoProviderName } from "../../../generation/providers/registry.js";
+import { markProviderOutputReceived } from "../../billing/generation-billing.js";
 
 registerExecutor("video_generation", async (jobId, _rawPayload, ctx: ExecutorContext) => {
   const t0 = Date.now();
@@ -45,6 +46,7 @@ registerExecutor("video_generation", async (jobId, _rawPayload, ctx: ExecutorCon
   const heartbeatTimer = setInterval(() => {
     ctx.renewVt(VIDEO_VT_SECONDS);
   }, 120_000);
+  let providerOutputReceived = false;
 
   try {
     lap("replicate_call_start");
@@ -58,6 +60,7 @@ registerExecutor("video_generation", async (jobId, _rawPayload, ctx: ExecutorCon
       ...(payload.input_video ? { inputVideo: payload.input_video } : {}),
       ...(payload.enable_audio != null ? { enableAudio: payload.enable_audio } : {}),
     });
+    providerOutputReceived = true;
     lap("replicate_call_done");
 
     // Vertex AI returns inline base64 data URIs; Developer API returns HTTP URLs.
@@ -131,6 +134,9 @@ registerExecutor("video_generation", async (jobId, _rawPayload, ctx: ExecutorCon
     // non-retryable errors (e.g. invalid_input) from transient failures.
     (wrapped as Error & { code?: string }).code =
       (err as { code?: string })?.code ?? "executor_error";
+    if (providerOutputReceived) {
+      markProviderOutputReceived(wrapped);
+    }
     throw wrapped;
   } finally {
     clearInterval(heartbeatTimer);

@@ -35,6 +35,7 @@ import {
   BillingServiceError,
   type BillingService,
 } from "../features/billing/billing-service.js";
+import { refundBilledGenerationJob } from "../features/billing/generation-billing.js";
 
 export async function registerJobRoutes(
   app: FastifyInstance,
@@ -318,6 +319,14 @@ export async function registerJobRoutes(
 
       const { jobId } = request.params as { jobId: string };
       const job = await options.jobService.cancelJob(user, jobId);
+      if (options.billingService) {
+        await refundBilledGenerationJob({
+          billingService: options.billingService,
+          jobId: job.id,
+          payload: job.payload,
+          reason: "job_canceled",
+        });
+      }
 
       return reply.code(200).send(jobResponseSchema.parse({ job }));
     } catch (error) {

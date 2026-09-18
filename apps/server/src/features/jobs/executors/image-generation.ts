@@ -3,6 +3,7 @@ import { registerExecutor, type ExecutorContext } from "../job-executor.js";
 import { generateImage } from "../../../generation/image-generation.js";
 import { resolveImageProviderName } from "../../../generation/providers/registry.js";
 import { applyWatermark } from "../../credits/watermark.js";
+import { markProviderOutputReceived } from "../../billing/generation-billing.js";
 
 import type { SubscriptionPlan } from "@creative/shared";
 
@@ -50,6 +51,7 @@ registerExecutor("image_generation", async (jobId, _rawPayload, ctx: ExecutorCon
   const heartbeatTimer = setInterval(() => {
     ctx.renewVt(IMAGE_VT_SECONDS);
   }, 60_000);
+  let providerOutputReceived = false;
 
   // Log input image format for debugging the data-URI-passthrough pipeline
   if (payload.input_images?.length) {
@@ -77,6 +79,7 @@ registerExecutor("image_generation", async (jobId, _rawPayload, ctx: ExecutorCon
         (genError as { code?: string })?.code ?? "executor_error";
       throw wrapped;
     }
+    providerOutputReceived = true;
     lap(`${providerName}_call_done`);
 
     // Download the generated image from the provider CDN
@@ -160,6 +163,8 @@ registerExecutor("image_generation", async (jobId, _rawPayload, ctx: ExecutorCon
       height: generated.height,
       mime_type: generated.mimeType ?? "image/png",
     };
+  } catch (error) {
+    throw providerOutputReceived ? markProviderOutputReceived(error) : error;
   } finally {
     clearInterval(heartbeatTimer);
   }

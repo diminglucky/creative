@@ -60,7 +60,7 @@ export type JobService = {
 
   // Admin-only methods (use admin client, no user auth)
   setCreditsInfo(jobId: string, creditsCost: number, transactionId: string): Promise<void>;
-  markRunning(jobId: string): Promise<void>;
+  markRunning(jobId: string): Promise<boolean>;
   markSucceeded(jobId: string, result: Record<string, unknown>): Promise<void>;
   markFailed(jobId: string, errorCode: string, errorMessage: string): Promise<void>;
   markDeadLetter(jobId: string, errorCode: string, errorMessage: string): Promise<void>;
@@ -197,7 +197,7 @@ export function createJobService(options: {
         .from("background_jobs")
         .update({ status: "canceled", canceled_at: new Date().toISOString() })
         .eq("id", jobId)
-        .in("status", ["queued", "running"])
+        .eq("status", "queued")
         .select(SELECT_COLS)
         .maybeSingle();
 
@@ -246,11 +246,17 @@ export function createJobService(options: {
 
     async markRunning(jobId) {
       const admin = options.getAdminClient();
-      await admin
+      const { data: job, error } = await admin
         .from("background_jobs")
         .update({ status: "running", started_at: new Date().toISOString() })
         .eq("id", jobId)
-        .eq("status", "queued");
+        .eq("status", "queued")
+        .select("id")
+        .maybeSingle();
+      if (error) {
+        throw new JobServiceError("job_query_failed", "Failed to claim job.", 500);
+      }
+      return Boolean(job);
     },
 
     async markSucceeded(jobId, result) {

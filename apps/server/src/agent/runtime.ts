@@ -28,6 +28,8 @@ import type { ConnectionManager } from "../ws/connection-manager.js";
 import type { SubmitImageJobFn } from "./tools/image-generate.js";
 import type { SubmitVideoJobFn } from "./tools/video-generate.js";
 import type { CreditService } from "../features/credits/credit-service.js";
+import type { BillingService } from "../features/billing/billing-service.js";
+import { createBilledGenerationJob } from "../features/billing/generation-billing.js";
 import { TierGuardError, type TierGuard } from "../features/credits/tier-guard.js";
 import { getPlanConfig, type BillingErrorCode, type ImageQualityLevel } from "@creative/shared";
 import { createAgentBackend } from "./backends/index.js";
@@ -252,6 +254,7 @@ type CreateAgentRuntimeOptions = {
   agentRunMetadataService?: AgentRunMetadataService;
   connectionManager?: ConnectionManager;
   createUserClient?: (accessToken: string) => unknown;
+  billingService?: BillingService;
   creditService?: CreditService;
   env: ServerEnv;
   eventDelayMs?: number;
@@ -488,7 +491,7 @@ export function createAgentRunService(options: CreateAgentRuntimeOptions) {
           }
 
           // ── Balance pre-check: stop run immediately if insufficient ──
-          if (options.creditService && creditsCost > 0) {
+          if (!options.billingService && options.creditService && creditsCost > 0) {
             const balanceInfo = await options.creditService.getBalance(workspaceId);
             if (balanceInfo.balance < creditsCost) {
               pushBillingErrorAndAbort(run, canvasId, options, "insufficient_credits", "Insufficient credits", {
@@ -501,22 +504,41 @@ export function createAgentRunService(options: CreateAgentRuntimeOptions) {
             }
           }
 
-          const job = await jobSvc.createJob(user, {
-            workspaceId,
-            ...(canvasId ? { canvasId } : {}),
-            ...(sessionId ? { sessionId } : {}),
-            jobType: "image_generation",
-            payload: {
-              prompt: input.prompt,
-              title: input.title,
-              model: input.model,
-              aspect_ratio: input.aspectRatio,
-              ...(input.inputImages ? { input_images: input.inputImages } : {}),
-            },
-          });
+          const jobPayload = {
+            prompt: input.prompt,
+            title: input.title,
+            model: input.model,
+            aspect_ratio: input.aspectRatio,
+            ...(input.inputImages ? { input_images: input.inputImages } : {}),
+          };
+          const createJob = (payload: Record<string, unknown>) =>
+            jobSvc.createJob(user, {
+              workspaceId,
+              ...(canvasId ? { canvasId } : {}),
+              ...(sessionId ? { sessionId } : {}),
+              jobType: "image_generation",
+              payload,
+            });
+          const job = options.billingService
+            ? (
+                await createBilledGenerationJob({
+                  billingService: options.billingService,
+                  charge: {
+                    workspaceId,
+                    userId,
+                    modelId: input.model,
+                    generationType: "image",
+                    quality: (input.quality as ImageQualityLevel) ?? "hd",
+                    idempotencyKey: `agent-image:${runId}:${randomUUID()}`,
+                  },
+                  payload: jobPayload,
+                  createJob,
+                })
+              ).job
+            : await createJob(jobPayload);
 
           // Deduct credits after job creation
-          if (options.creditService && creditsCost > 0) {
+          if (!options.billingService && options.creditService && creditsCost > 0) {
             try {
               const txId = await options.creditService.deductCredits(
                 workspaceId, userId, creditsCost, job.id,
@@ -686,7 +708,7 @@ export function createAgentRunService(options: CreateAgentRuntimeOptions) {
           }
 
           // ── Balance pre-check: stop run immediately if insufficient ──
-          if (options.creditService && creditsCost > 0) {
+          if (!options.billingService && options.creditService && creditsCost > 0) {
             const balanceInfo = await options.creditService.getBalance(workspaceId);
             if (balanceInfo.balance < creditsCost) {
               pushBillingErrorAndAbort(run, canvasId, options, "insufficient_credits", "Insufficient credits", {
@@ -699,25 +721,49 @@ export function createAgentRunService(options: CreateAgentRuntimeOptions) {
             }
           }
 
-          const job = await jobSvc.createJob(user, {
-            workspaceId,
-            ...(canvasId ? { canvasId } : {}),
-            ...(sessionId ? { sessionId } : {}),
-            jobType: "video_generation",
-            payload: {
-              prompt: input.prompt,
-              model: input.model,
-              ...(input.duration != null ? { duration: input.duration } : {}),
-              ...(input.resolution ? { resolution: input.resolution } : {}),
-              ...(input.aspectRatio ? { aspect_ratio: input.aspectRatio } : {}),
-              ...(input.inputImages ? { input_images: input.inputImages } : {}),
-              ...(input.inputVideo ? { input_video: input.inputVideo } : {}),
-              ...(input.enableAudio != null ? { enable_audio: input.enableAudio } : {}),
-            },
-          });
+          const jobPayload = {
+            prompt: input.prompt,
+            model: input.model,
+            ...(input.duration != null ? { duration: input.duration } : {}),
+            ...(input.resolution ? { resolution: input.resolution } : {}),
+            ...(input.aspectRatio ? { aspect_ratio: input.aspectRatio } : {}),
+            ...(input.inputImages ? { input_images: input.inputImages } : {}),
+            ...(input.inputVideo ? { input_video: input.inputVideo } : {}),
+            ...(input.enableAudio != null ? { enable_audio: input.enableAudio } : {}),
+          };
+          const createJob = (payload: Record<string, unknown>) =>
+            jobSvc.createJob(user, {
+              workspaceId,
+              ...(canvasId ? { canvasId } : {}),
+              ...(sessionId ? { sessionId } : {}),
+              jobType: "video_generation",
+              payload,
+            });
+          const job = options.billingService
+            ? (
+                await createBilledGenerationJob({
+                  billingService: options.billingService,
+                  charge: {
+                    workspaceId,
+                    userId,
+                    modelId: input.model,
+                    generationType: "video",
+                    ...(input.duration != null
+                      ? { durationSeconds: input.duration }
+                      : {}),
+                    ...(input.resolution
+                      ? { quality: input.resolution }
+                      : {}),
+                    idempotencyKey: `agent-video:${runId}:${randomUUID()}`,
+                  },
+                  payload: jobPayload,
+                  createJob,
+                })
+              ).job
+            : await createJob(jobPayload);
 
           // Deduct credits after job creation
-          if (options.creditService && creditsCost > 0) {
+          if (!options.billingService && options.creditService && creditsCost > 0) {
             try {
               const txId = await options.creditService.deductCredits(
                 workspaceId, userId, creditsCost, job.id,

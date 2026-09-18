@@ -234,6 +234,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
       : { eventDelayMs: options.mockEventDelayMs }),
     env,
     ...(jobService ? { jobService } : {}),
+    billingService,
     creditService,
     tierGuard,
     viewerService,
