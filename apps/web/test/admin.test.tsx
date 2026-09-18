@@ -152,8 +152,10 @@ describe("admin console", () => {
     renderAdmin(<AdminPage />);
 
     expect(await screen.findByText("¥1,289.00")).toBeInTheDocument();
-    expect(screen.getByText("model.price.updated")).toBeInTheDocument();
-    expect(screen.getByText("root@example.com")).toBeInTheDocument();
+    expect(screen.getByText("更新模型定价")).toBeInTheDocument();
+    expect(screen.getByText("操作人：root@example.com")).toBeInTheDocument();
+    expect(screen.getByText("模型：imagen-3")).toBeInTheDocument();
+    expect(screen.queryByText("model.price.updated")).not.toBeInTheDocument();
   });
 
   it("shows only masked provider secrets", async () => {
