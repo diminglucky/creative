@@ -79,14 +79,14 @@ describe("admin routes", () => {
     const response = await app.inject({ method: "POST", url: "/api/admin/providers/openai/models/discover", payload: { baseUrl: "https://gateway.example.com/v1", secret: "sk-test" } });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ models: [{ id: "gpt-image-1", ownedBy: "openai" }] });
-    expect(service.discoverProviderModels).toHaveBeenCalledWith("openai", { baseUrl: "https://gateway.example.com/v1", secret: "sk-test" });
+    expect(service.discoverProviderModels).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), "openai", { baseUrl: "https://gateway.example.com/v1", secret: "sk-test" });
   });
 
   it("discovers models for any configured provider", async () => {
     const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
     const response = await app.inject({ method: "POST", url: "/api/admin/providers/volces/models/discover", payload: { baseUrl: "https://ark.example.com/api/v3", secret: "test-key" } });
     expect(response.statusCode).toBe(200);
-    expect(service.discoverProviderModels).toHaveBeenCalledWith("volces", expect.any(Object));
+    expect(service.discoverProviderModels).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), "volces", expect.any(Object));
   });
 
   it("imports an image model with billing prices", async () => {

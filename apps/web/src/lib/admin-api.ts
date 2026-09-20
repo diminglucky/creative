@@ -21,9 +21,9 @@ export async function isAdminSession(token: string): Promise<boolean> {
 export const fetchAdminProviders = (t:string) => request<any>(t,"/providers");
 export const fetchAdminModels = (t:string) => request<any>(t,"/models");
 export const fetchAdminPlans = (t:string) => request<any>(t,"/plans");
-export const fetchAdminUsers = (t:string) => request<any>(t,"/users");
-export const fetchAdminOrders = (t:string) => request<any>(t,"/orders");
-export const fetchAdminLedger = (t:string) => request<any>(t,"/ledger");
+export const fetchAdminUsers = (t:string,offset=0,limit=50) => request<any>(t,`/users?offset=${offset}&limit=${limit}`);
+export const fetchAdminOrders = (t:string,offset=0,limit=50) => request<any>(t,`/orders?offset=${offset}&limit=${limit}`);
+export const fetchAdminLedger = (t:string,offset=0,limit=50) => request<any>(t,`/ledger?offset=${offset}&limit=${limit}`);
 export const fetchAdminCreditPackSettings=(t:string)=>request<any>(t,"/credit-packs");
 export const updateAdminCreditRatio=(t:string,creditsPerYuan:number)=>request<void>(t,"/credit-packs/settings",{method:"PATCH",body:JSON.stringify({creditsPerYuan})});
 export const createAdminCreditPack=(t:string,data:unknown)=>request<void>(t,"/credit-packs",{method:"POST",body:JSON.stringify(data)});

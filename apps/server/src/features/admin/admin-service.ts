@@ -1,7 +1,57 @@
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
+
 import type { AdminSupabaseClient } from "../../supabase/admin.js";
 import type { ProviderSecretCrypto } from "../../security/provider-secret-crypto.js";
 
 type Actor = { id: string; email: string };
+
+const PRIVATE_IPV4 = [
+  /^10\./,
+  /^127\./,
+  /^0\./,
+  /^169\.254\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+];
+
+function isPrivateIp(ip: string): boolean {
+  const lower = ip.toLowerCase();
+  if (lower.includes(":")) {
+    return (
+      lower === "::1" ||
+      lower === "::" ||
+      lower.startsWith("fc") ||
+      lower.startsWith("fd") ||
+      lower.startsWith("fe8") ||
+      lower.startsWith("fe9") ||
+      lower.startsWith("fea") ||
+      lower.startsWith("feb")
+    );
+  }
+  return PRIVATE_IPV4.some((r) => r.test(lower));
+}
+
+async function assertPublicBaseUrl(raw: string): Promise<void> {
+  const url = new URL(raw);
+  const hostname = url.hostname.toLowerCase();
+  if (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname.endsWith(".local") ||
+    hostname.endsWith(".internal")
+  ) {
+    throw new Error("拒绝访问内网地址。");
+  }
+  if (isIP(hostname)) {
+    if (isPrivateIp(hostname)) throw new Error("拒绝访问内网地址。");
+    return;
+  }
+  const addresses = await lookup(hostname, { all: true });
+  if (addresses.some((a) => isPrivateIp(a.address))) {
+    throw new Error("拒绝访问内网地址。");
+  }
+}
 
 export type AdminService = ReturnType<typeof createAdminService>;
 
@@ -31,16 +81,26 @@ export function createAdminService(options: {
   };
   return {
     async getOverview() {
-      const [orders, charges, audits, users] = await Promise.all([
-        client().from("payment_orders").select("amount_fen,status"),
-        client().from("billing_charges").select("id,refunded_at"),
+      const [stats, settings, audits] = await Promise.all([
+        client().rpc("admin_overview_stats"),
+        client()
+          .from("billing_settings")
+          .select("credits_per_yuan")
+          .eq("id", "default")
+          .single(),
         client()
           .from("admin_audit_logs")
           .select("id,actor_email,action,resource_type,resource_id,created_at")
           .order("created_at", { ascending: false })
           .limit(10),
-        client().from("profiles").select("id", { count: "exact", head: true }),
       ]);
+      if (stats.error) throw stats.error;
+      const s = (stats.data ?? {}) as any;
+      const creditsPerYuan = settings.data?.credits_per_yuan ?? 10;
+      const refundedCreditFen = Math.round(
+        ((s.refunded_credits ?? 0) / creditsPerYuan) * 100,
+      );
+      const refundFen = refundedCreditFen + (s.refunded_money_fen ?? 0);
       const auditRows = audits.data ?? [];
       const userIds = [
         ...new Set(
@@ -63,12 +123,10 @@ export function createAdminService(options: {
       );
       return {
         metrics: {
-          revenueFen: (orders.data ?? [])
-            .filter((o: any) => o.status === "paid")
-            .reduce((n: number, o: any) => n + o.amount_fen, 0),
-          refundFen: 0,
-          generationCount: (charges.data ?? []).length,
-          activeUsers: users.count ?? 0,
+          revenueFen: s.revenue_fen ?? 0,
+          refundFen,
+          generationCount: s.generation_count ?? 0,
+          activeUsers: s.user_count ?? 0,
         },
         recentAudit: auditRows.map((row: any) => {
           const targetUser =
@@ -136,9 +194,11 @@ export function createAdminService(options: {
       });
     },
     async discoverProviderModels(
+      actor: Actor,
       id: string,
       input: { baseUrl: string; secret?: string | undefined },
     ) {
+      await assertPublicBaseUrl(input.baseUrl);
       let secret = input.secret;
       if (!secret) {
         const { data, error } = await client()
@@ -159,6 +219,7 @@ export function createAdminService(options: {
           Authorization: `Bearer ${secret}`,
           Accept: "application/json",
         },
+        signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok)
         throw new Error(`Failed to fetch models: ${response.status}`);
@@ -167,7 +228,7 @@ export function createAdminService(options: {
         results?: Array<{ id?: string; name?: string; owner?: string }>;
       };
       const models = payload.data ?? payload.results ?? [];
-      return models
+      const discovered = models
         .map((model) => ({
           id: model.id ?? ("name" in model ? model.name : undefined),
           ownedBy:
@@ -181,6 +242,11 @@ export function createAdminService(options: {
           (model): model is { id: string; ownedBy: string } =>
             typeof model.id === "string" && model.id.length > 0,
         );
+      await audit(actor, "provider.models.discovered", "provider", id, {
+        baseUrl: input.baseUrl,
+        count: discovered.length,
+      });
+      return discovered;
     },
     async listModels() {
       const { data, error } = await client()
@@ -223,9 +289,10 @@ export function createAdminService(options: {
           enabled: input.enabled,
           updated_at: new Date().toISOString(),
         })
-        .eq("model_id", id);
+        .eq("model_id", id)
+        .eq("generation_type", input.generationType);
       if (error) throw error;
-      await audit(actor, "model.price.updated", "model", id, input);
+      await audit(actor, "model.price.updated", "model", `${id}:${input.generationType}`, input);
     },
     async listPlans() {
       const { data, error } = await client()
@@ -360,14 +427,15 @@ export function createAdminService(options: {
       if (error) throw error;
       await audit(actor, "credit.pack.deleted", "credit_pack", id, {});
     },
-    async listUsers() {
+    async listUsers(offset = 0, limit = 50) {
       const { data, error } = await client()
         .from("profiles")
         .select("id,email,display_name,created_at")
         .order("created_at", { ascending: false })
-        .limit(200);
+        .range(offset, offset + limit);
       if (error) throw error;
-      return data ?? [];
+      const rows = data ?? [];
+      return { items: rows.slice(0, limit), hasMore: rows.length > limit };
     },
     async adjustUser(actor: Actor, id: string, input: any) {
       const { error } = await client().rpc("adjust_wallet_balance", {
@@ -380,23 +448,25 @@ export function createAdminService(options: {
       });
       if (error) throw error;
     },
-    async listOrders() {
+    async listOrders(offset = 0, limit = 50) {
       const { data, error } = await client()
         .from("payment_orders")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(200);
+        .range(offset, offset + limit);
       if (error) throw error;
-      return data ?? [];
+      const rows = data ?? [];
+      return { items: rows.slice(0, limit), hasMore: rows.length > limit };
     },
-    async listLedger() {
+    async listLedger(offset = 0, limit = 50) {
       const { data, error } = await client()
         .from("wallet_ledger")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(500);
+        .range(offset, offset + limit);
       if (error) throw error;
-      return data ?? [];
+      const rows = data ?? [];
+      return { items: rows.slice(0, limit), hasMore: rows.length > limit };
     },
   };
 }
