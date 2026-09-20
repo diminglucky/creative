@@ -4,6 +4,7 @@ create table if not exists public.billing_settings (
   updated_at timestamptz not null default now()
 );
 insert into public.billing_settings(id,credits_per_yuan) values('default',10) on conflict(id) do nothing;
+alter table public.billing_settings enable row level security;
 
 alter table public.credit_packs add column if not exists amount_fen integer;
 alter table public.credit_packs add column if not exists base_credits integer;
