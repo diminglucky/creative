@@ -196,9 +196,8 @@ function ProviderCard({ provider, reload }: { provider: any; reload: () => void 
   );
 }
 
-function AddProviderForm({ reload }: { reload: () => void }) {
+function AddProviderForm({ reload, onClose }: { reload: () => void; onClose: () => void }) {
   const { session } = useAuth();
-  const [open, setOpen] = useState(false);
   const [id, setId] = useState("");
   const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
@@ -223,7 +222,7 @@ function AddProviderForm({ reload }: { reload: () => void }) {
       setBaseUrl("");
       setSecret("");
       setEnabled(true);
-      setOpen(false);
+      onClose();
       reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "新增供应商失败");
@@ -232,20 +231,11 @@ function AddProviderForm({ reload }: { reload: () => void }) {
     }
   }
 
-  if (!open) {
-    return (
-      <Button className="mb-4" onClick={() => setOpen(true)}>
-        <Plus className="h-4 w-4" />
-        新增供应商
-      </Button>
-    );
-  }
-
   return (
     <div className="mb-4 rounded-md border bg-background p-4">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-medium">新增供应商</h2>
-        <Button variant="ghost" onClick={() => setOpen(false)}>
+        <Button variant="ghost" onClick={onClose}>
           取消
         </Button>
       </div>
@@ -308,11 +298,23 @@ function AddProviderForm({ reload }: { reload: () => void }) {
 
 export default function ProvidersPage() {
   const load = useCallback(fetchAdminProviders, []);
+  const [showAddProvider, setShowAddProvider] = useState(false);
   return (
-    <AdminView title="供应商配置" load={load}>
+    <AdminView
+      title="供应商配置"
+      load={load}
+      action={
+        <Button onClick={() => setShowAddProvider(true)}>
+          <Plus className="h-4 w-4" />
+          新增供应商
+        </Button>
+      }
+    >
       {(data: any, reload) => (
         <div>
-          <AddProviderForm reload={reload} />
+          {showAddProvider ? (
+            <AddProviderForm reload={reload} onClose={() => setShowAddProvider(false)} />
+          ) : null}
           {data.providers.length ? (
             <div className="grid gap-4">
               {data.providers.map((provider: any) => (
