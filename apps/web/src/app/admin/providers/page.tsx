@@ -5,6 +5,12 @@ import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
 import {
   createAdminModel,
@@ -196,7 +202,15 @@ function ProviderCard({ provider, reload }: { provider: any; reload: () => void 
   );
 }
 
-function AddProviderForm({ reload, onClose }: { reload: () => void; onClose: () => void }) {
+function AddProviderForm({
+  open,
+  onOpenChange,
+  reload,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  reload: () => void;
+}) {
   const { session } = useAuth();
   const [id, setId] = useState("");
   const [name, setName] = useState("");
@@ -222,7 +236,7 @@ function AddProviderForm({ reload, onClose }: { reload: () => void; onClose: () 
       setBaseUrl("");
       setSecret("");
       setEnabled(true);
-      onClose();
+      onOpenChange(false);
       reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "新增供应商失败");
@@ -232,67 +246,70 @@ function AddProviderForm({ reload, onClose }: { reload: () => void; onClose: () 
   }
 
   return (
-    <div className="mb-4 rounded-md border bg-background p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-medium">新增供应商</h2>
-        <Button variant="ghost" onClick={onClose}>
-          取消
-        </Button>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm">
-          供应商名称
-          <Input
-            aria-label="供应商名称"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>新增供应商</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            供应商名称
+            <Input
+              aria-label="供应商名称"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <label className="text-sm">
+            供应商标识
+            <Input
+              aria-label="供应商标识"
+              placeholder="例如 openrouter"
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+            />
+          </label>
+          <label className="text-sm sm:col-span-2">
+            API 基础地址
+            <Input
+              aria-label="API 基础地址"
+              placeholder="https://example.com/v1"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+            />
+          </label>
+          <label className="text-sm sm:col-span-2">
+            API 密钥
+            <Input
+              aria-label="API 密钥"
+              type="password"
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
+            />
+          </label>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
           />
+          创建后立即启用
         </label>
-        <label className="text-sm">
-          供应商标识
-          <Input
-            aria-label="供应商标识"
-            placeholder="例如 openrouter"
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-          />
-        </label>
-        <label className="text-sm sm:col-span-2">
-          API 基础地址
-          <Input
-            aria-label="API 基础地址"
-            placeholder="https://example.com/v1"
-            value={baseUrl}
-            onChange={(e) => setBaseUrl(e.target.value)}
-          />
-        </label>
-        <label className="text-sm sm:col-span-2">
-          API 密钥
-          <Input
-            aria-label="API 密钥"
-            type="password"
-            value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-          />
-        </label>
-      </div>
-      <label className="mt-3 flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) => setEnabled(e.target.checked)}
-        />
-        创建后立即启用
-      </label>
-      {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
-      <Button
-        className="mt-4"
-        disabled={saving || !id || !name || !baseUrl || !secret}
-        onClick={submit}
-      >
-        {saving ? "正在创建..." : "创建供应商"}
-      </Button>
-    </div>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            取消
+          </Button>
+          <Button
+            disabled={saving || !id || !name || !baseUrl || !secret}
+            onClick={submit}
+          >
+            {saving ? "正在创建..." : "创建供应商"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -312,9 +329,11 @@ export default function ProvidersPage() {
     >
       {(data: any, reload) => (
         <div>
-          {showAddProvider ? (
-            <AddProviderForm reload={reload} onClose={() => setShowAddProvider(false)} />
-          ) : null}
+          <AddProviderForm
+            open={showAddProvider}
+            onOpenChange={setShowAddProvider}
+            reload={reload}
+          />
           {data.providers.length ? (
             <div className="grid gap-4">
               {data.providers.map((provider: any) => (
