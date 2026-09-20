@@ -1,8 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -125,112 +132,154 @@ const emptyForm = {
   enabled: true,
 };
 
-function ModelCreator({ providers }: { providers: any[] }) {
+function ModelCreatorDialog({
+  open,
+  onOpenChange,
+  providers,
+  onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  providers: any[];
+  onCreated: () => void;
+}) {
   const { session } = useAuth();
   const [form, setForm] = useState(emptyForm);
-  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   async function create() {
-    await createAdminModel(session!.access_token, {
-      providerId: form.providerId,
-      modelId: form.modelId,
-      displayName: form.displayName,
-      generationType: form.generationType,
-      creditPrice: Number(form.creditPrice),
-      costPriceFen: Math.round(Number(form.costPrice) * 100),
-      minimumPlan: form.minimumPlan,
-      enabled: form.enabled,
-    });
-    setForm(emptyForm);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaving(true);
+    setError("");
+    try {
+      await createAdminModel(session!.access_token, {
+        providerId: form.providerId,
+        modelId: form.modelId,
+        displayName: form.displayName,
+        generationType: form.generationType,
+        creditPrice: Number(form.creditPrice),
+        costPriceFen: Math.round(Number(form.costPrice) * 100),
+        minimumPlan: form.minimumPlan,
+        enabled: form.enabled,
+      });
+      setForm(emptyForm);
+      onOpenChange(false);
+      onCreated();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "新增模型失败");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="rounded-md border bg-background p-4">
-      <h2 className="mb-3 font-medium">手动新增模型</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <label className="text-sm">
-          供应商
-          <select
-            className={selectClass}
-            value={form.providerId}
-            onChange={(e) => setForm({ ...form, providerId: e.target.value })}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>新增模型</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="text-sm">
+            供应商
+            <select
+              className={selectClass}
+              value={form.providerId}
+              onChange={(e) =>
+                setForm({ ...form, providerId: e.target.value })
+              }
+            >
+              <option value="">选择供应商</option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm">
+            模型 ID
+            <Input
+              value={form.modelId}
+              onChange={(e) => setForm({ ...form, modelId: e.target.value })}
+              placeholder="例如 black-forest-labs/flux-kontext-pro"
+            />
+          </label>
+          <label className="text-sm">
+            显示名称
+            <Input
+              value={form.displayName}
+              onChange={(e) =>
+                setForm({ ...form, displayName: e.target.value })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            类型
+            <select
+              className={selectClass}
+              value={form.generationType}
+              onChange={(e) =>
+                setForm({ ...form, generationType: e.target.value })
+              }
+            >
+              <option value="image">图片</option>
+              <option value="video">视频</option>
+            </select>
+          </label>
+          <label className="text-sm">
+            每次生成积分
+            <Input
+              type="number"
+              min="1"
+              value={form.creditPrice}
+              onChange={(e) =>
+                setForm({ ...form, creditPrice: Number(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            服务商成本（元）
+            <Input
+              type="number"
+              step="0.01"
+              value={form.costPrice}
+              onChange={(e) =>
+                setForm({ ...form, costPrice: Number(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm">
+            最低套餐
+            <PlanSelect
+              value={form.minimumPlan}
+              onChange={(v) => setForm({ ...form, minimumPlan: v })}
+            />
+          </label>
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={form.enabled}
+            onChange={(e) => setForm({ ...form, enabled: e.target.checked })}
+          />
+          创建后立即启用
+        </label>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            取消
+          </Button>
+          <Button
+            disabled={
+              saving || !form.providerId || !form.modelId || !form.displayName
+            }
+            onClick={create}
           >
-            <option value="">选择供应商</option>
-            {providers.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="text-sm">
-          模型 ID
-          <Input
-            value={form.modelId}
-            onChange={(e) => setForm({ ...form, modelId: e.target.value })}
-            placeholder="例如 black-forest-labs/flux-kontext-pro"
-          />
-        </label>
-        <label className="text-sm">
-          显示名称
-          <Input
-            value={form.displayName}
-            onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-          />
-        </label>
-        <label className="text-sm">
-          类型
-          <select
-            className={selectClass}
-            value={form.generationType}
-            onChange={(e) =>
-              setForm({ ...form, generationType: e.target.value })
-            }
-          >
-            <option value="image">图片</option>
-            <option value="video">视频</option>
-          </select>
-        </label>
-        <label className="text-sm">
-          新增·每次生成积分
-          <Input
-            type="number"
-            min="1"
-            value={form.creditPrice}
-            onChange={(e) =>
-              setForm({ ...form, creditPrice: Number(e.target.value) })
-            }
-          />
-        </label>
-        <label className="text-sm">
-          新增·服务商成本（元）
-          <Input
-            type="number"
-            step="0.01"
-            value={form.costPrice}
-            onChange={(e) =>
-              setForm({ ...form, costPrice: Number(e.target.value) })
-            }
-          />
-        </label>
-        <label className="text-sm">
-          新增·最低套餐
-          <PlanSelect
-            value={form.minimumPlan}
-            onChange={(v) => setForm({ ...form, minimumPlan: v })}
-          />
-        </label>
-      </div>
-      <Button
-        className="mt-4"
-        disabled={!form.providerId || !form.modelId || !form.displayName}
-        onClick={create}
-      >
-        {saved ? "已添加" : "新增模型"}
-      </Button>
-    </div>
+            {saving ? "正在创建..." : "创建模型"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -242,29 +291,119 @@ export default function ModelsPage() {
     ]);
     return { models: modelsRes.models, providers: providersRes.providers };
   }, []);
+  const [showCreate, setShowCreate] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<"all" | "image" | "video">(
+    "all",
+  );
+  const [providerFilter, setProviderFilter] = useState("all");
+  const [query, setQuery] = useState("");
 
   return (
-    <>
-      <h1 className="mb-6 text-xl font-semibold">模型定价</h1>
-      <AdminView title="" load={load}>
-        {(d: any) => (
+    <AdminView
+      title="模型定价"
+      load={load}
+      action={
+        <Button onClick={() => setShowCreate(true)}>
+          <Plus className="h-4 w-4" />
+          新增模型
+        </Button>
+      }
+    >
+      {(d: any, reload) => {
+        const providerIds = Array.from(
+          new Set(
+            d.models
+              .map((model: any) => model.provider_id)
+              .filter((value: unknown): value is string => Boolean(value)),
+          ),
+        ) as string[];
+        const providerName = (id: string) =>
+          d.providers.find((provider: any) => provider.id === id)?.name ?? id;
+        const normalizedQuery = query.trim().toLowerCase();
+        const filtered = d.models.filter((model: any) => {
+          if (typeFilter !== "all" && model.generation_type !== typeFilter) {
+            return false;
+          }
+          if (
+            providerFilter !== "all" &&
+            model.provider_id !== providerFilter
+          ) {
+            return false;
+          }
+          if (!normalizedQuery) return true;
+          return `${model.display_name} ${model.model_id}`
+            .toLowerCase()
+            .includes(normalizedQuery);
+        });
+        return (
           <>
-            <ModelCreator providers={d.providers} />
-            <div className="mt-4 grid gap-4">
-              {d.models.length ? (
-                d.models.map((m: any) => (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <div className="flex rounded-md border bg-background p-0.5">
+                {(
+                  [
+                    ["all", "全部"],
+                    ["image", "图片"],
+                    ["video", "视频"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`rounded px-3 py-1.5 text-sm ${
+                      typeFilter === value
+                        ? "bg-foreground text-background"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    onClick={() => setTypeFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <select
+                className={`${selectClass} max-w-48`}
+                value={providerFilter}
+                onChange={(e) => setProviderFilter(e.target.value)}
+                aria-label="按供应商筛选"
+              >
+                <option value="all">全部供应商</option>
+                {providerIds.map((id) => (
+                  <option key={id} value={id}>
+                    {providerName(id)}
+                  </option>
+                ))}
+              </select>
+              <Input
+                className="max-w-64"
+                placeholder="搜索模型名称或 ID"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <span className="text-sm text-muted-foreground">
+                共 {filtered.length} 个模型
+              </span>
+            </div>
+            <div className="grid gap-4">
+              {filtered.length ? (
+                filtered.map((model: any) => (
                   <ModelEditor
-                    key={`${m.model_id}:${m.generation_type}`}
-                    model={m}
+                    key={`${model.model_id}:${model.generation_type}`}
+                    model={model}
                   />
                 ))
               ) : (
                 <Empty label="模型" />
               )}
             </div>
+            <ModelCreatorDialog
+              open={showCreate}
+              onOpenChange={setShowCreate}
+              providers={d.providers}
+              onCreated={reload}
+            />
           </>
-        )}
-      </AdminView>
-    </>
+        );
+      }}
+    </AdminView>
   );
 }

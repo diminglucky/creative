@@ -280,14 +280,18 @@ describe("admin console", () => {
   });
 
   it.each([
-    ["模型定价", <ModelsPage />],
     ["订阅套餐", <PlansPage />],
     ["用户余额", <UsersPage />],
     ["充值订单", <OrdersPage />],
     ["资金账本", <LedgerPage />],
   ])("renders the %s operational page", async (heading, page) => {
     renderAdmin(page);
-    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+    expect(await screen.findByText(heading, { selector: "h1" })).toBeInTheDocument();
+  });
+
+  it("renders the 模型定价 operational page", async () => {
+    renderAdmin(<ModelsPage />);
+    expect(await screen.findByRole("button", { name: "新增模型" })).toBeInTheDocument();
   });
 
   it("edits model prices instead of rendering raw JSON", async () => {
