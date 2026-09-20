@@ -47,32 +47,23 @@ export async function registerViewerRoutes(
 
       const viewer = await options.viewerService.ensureViewer(user);
 
-      // @credits-system: Auto-claim daily credits on login + attach credits info
+      // @credits-system: Attach credits info. Free users receive trial credits once at signup.
       let credits: Record<string, unknown> | undefined;
       if (options.creditService) {
         try {
-          // Auto-claim daily credits for free users on each viewer request
-          // (idempotent — claim_daily_credits is a no-op if already claimed today)
           const balance = await options.creditService.getBalance(
             viewer.workspace.id,
           );
-          if (balance.plan === "free" && !balance.dailyClaimed) {
-            await options.creditService.claimDailyCredits(viewer.workspace.id);
-          }
-
-          // Re-fetch balance after potential claim
-          const updatedBalance = await options.creditService.getBalance(
-            viewer.workspace.id,
-          );
-          const config = PLAN_CONFIGS[updatedBalance.plan as SubscriptionPlan];
+          const config = PLAN_CONFIGS[balance.plan as SubscriptionPlan];
           credits = {
-            balance: updatedBalance.balance,
-            plan: updatedBalance.plan,
-            dailyClaimed: updatedBalance.dailyClaimed,
+            balance: balance.balance,
+            plan: balance.plan,
+            dailyClaimed: balance.dailyClaimed,
             limits: {
               maxConcurrentJobs: config.maxConcurrentJobs,
               maxResolution: config.maxResolution,
               monthlyCredits: config.monthlyCredits,
+              trialCredits: config.trialCredits,
               dailyCredits: config.dailyCredits,
             },
           };

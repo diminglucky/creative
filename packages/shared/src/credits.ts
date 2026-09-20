@@ -38,6 +38,8 @@ export interface PlanConfig {
   plan: SubscriptionPlan;
   /** Monthly subscription credits (0 for free — uses daily instead) */
   monthlyCredits: number;
+  /** One-time signup trial credits */
+  trialCredits: number;
   /** Daily free credits (only for free plan) */
   dailyCredits: number;
   /** Max concurrent generation jobs */
@@ -62,7 +64,8 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
   free: {
     plan: "free",
     monthlyCredits: 0,
-    dailyCredits: 50,
+    trialCredits: 50,
+    dailyCredits: 0,
     maxConcurrentJobs: 1,
     maxResolution: "standard",
     maxVideoResolution: "720p",
@@ -75,6 +78,7 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
   starter: {
     plan: "starter",
     monthlyCredits: 1200,
+    trialCredits: 0,
     dailyCredits: 0,
     maxConcurrentJobs: 2,
     maxResolution: "standard",
@@ -88,6 +92,7 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
   pro: {
     plan: "pro",
     monthlyCredits: 5000,
+    trialCredits: 0,
     dailyCredits: 0,
     maxConcurrentJobs: 4,
     maxResolution: "hd",
@@ -101,6 +106,7 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
   ultra: {
     plan: "ultra",
     monthlyCredits: 15000,
+    trialCredits: 0,
     dailyCredits: 0,
     maxConcurrentJobs: 8,
     maxResolution: "ultra",
@@ -114,6 +120,7 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
   business: {
     plan: "business",
     monthlyCredits: 50000,
+    trialCredits: 0,
     dailyCredits: 0,
     maxConcurrentJobs: 12,
     maxResolution: "ultra",
@@ -134,11 +141,12 @@ export const PLAN_CONFIGS: Record<SubscriptionPlan, PlanConfig> = {
  */
 export const MODEL_MIN_TIER: Record<string, SubscriptionPlan> = {
   // ── Image models ──
-  // Free tier (basic 3)
+  // Free tier (low-cost models only)
   "google-official/gemini-2.5-flash-image": "free",
-  "google-official/gemini-3.1-flash-image-preview": "free",
+  "google-vertex/gemini-2.5-flash-image": "free",
   "google/nano-banana": "free",
   // Starter tier
+  "google-official/gemini-3.1-flash-image-preview": "starter",
   "google/nano-banana-pro": "starter",
   "google/nano-banana-2": "starter",
   "google/imagen-4": "starter",
@@ -422,6 +430,7 @@ export const creditBalanceResponseSchema = z.object({
     maxConcurrentJobs: z.number().int(),
     maxResolution: z.string(),
     monthlyCredits: z.number().int(),
+    trialCredits: z.number().int(),
     dailyCredits: z.number().int(),
   }),
 });

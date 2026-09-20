@@ -110,7 +110,9 @@ export function CreditBalance() {
   };
 
   const isFree = plan === "free";
-  const canClaim = isFree && !dailyClaimed;
+  const dailyCredits = limits?.dailyCredits ?? 0;
+  const trialCredits = limits?.trialCredits ?? 0;
+  const canClaim = isFree && dailyCredits > 0 && !dailyClaimed;
 
   if (loading) {
     return (
@@ -182,7 +184,11 @@ export function CreditBalance() {
                 {limits && (
                   <span className="text-xs text-muted-foreground">
                     {isFree
-                      ? `${limits.dailyCredits}/day`
+                      ? dailyCredits > 0
+                        ? `${dailyCredits}/day`
+                        : trialCredits > 0
+                          ? `试用 ${trialCredits} 积分`
+                          : null
                       : `${limits.monthlyCredits.toLocaleString()}/mo`}
                   </span>
                 )}
@@ -217,7 +223,7 @@ export function CreditBalance() {
               )}
 
               {/* Already claimed indicator */}
-              {isFree && dailyClaimed && (
+              {isFree && dailyCredits > 0 && dailyClaimed && (
                 <div className="mb-3 flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground/70">
                   <Zap className="h-3.5 w-3.5 text-muted-foreground" />
                   Daily credits claimed

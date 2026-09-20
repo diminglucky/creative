@@ -34,6 +34,7 @@ export const viewerCreditsSchema = z.object({
     maxConcurrentJobs: z.number().int(),
     maxResolution: z.string(),
     monthlyCredits: z.number().int(),
+    trialCredits: z.number().int(),
     dailyCredits: z.number().int(),
   }),
 });

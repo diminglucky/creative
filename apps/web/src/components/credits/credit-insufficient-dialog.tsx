@@ -40,7 +40,7 @@ export function CreditInsufficientDialog({
   accessTokenRef.current = session?.access_token;
 
   const isFree = plan === "free";
-  const canClaim = isFree && !dailyClaimed && !!onClaimDaily;
+  const canClaim = false;
   const [upgrading, setUpgrading] = useState(false);
 
   const handleUpgrade = useCallback(async () => {
@@ -143,7 +143,7 @@ export function CreditInsufficientDialog({
                 <button
                   type="button"
                   onClick={async () => {
-                    await onClaimDaily();
+                    await onClaimDaily?.();
                     onClose();
                   }}
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-success px-4 py-2.5 text-sm font-medium text-success-foreground transition-colors hover:bg-success/90"
