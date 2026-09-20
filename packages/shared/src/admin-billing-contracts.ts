@@ -24,7 +24,7 @@ export type GenerationPrice = z.infer<typeof generationPriceSchema>;
 export const generationChargeSchema = z.object({
   id: z.string().min(1),
   paymentMethod: paymentMethodSchema,
-  creditsCharged: z.number().int().nonnegative(),
+  creditsCharged: z.number().nonnegative(),
   moneyChargedFen: z.number().int().nonnegative(),
 }).superRefine((charge, context) => {
   const usesCredits = charge.creditsCharged > 0;

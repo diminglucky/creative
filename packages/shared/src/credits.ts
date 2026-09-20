@@ -367,9 +367,7 @@ export function getVideoCreditCost(
     total *= rule.resolutionMultipliers[selectedResolution] ?? 1;
   }
 
-  // Credit balances are integer-valued. Always round up so fractional
-  // provider rates never undercharge a generation.
-  return Math.ceil(total);
+  return Math.round(total * 10000) / 10000;
 }
 
 function basePlusDuration(
@@ -423,7 +421,7 @@ export function canUseVideoResolution(
 // ── API schemas ──────────────────────────────────────────────
 
 export const creditBalanceResponseSchema = z.object({
-  balance: z.number().int(),
+  balance: z.number().nonnegative(),
   plan: subscriptionPlanSchema,
   dailyClaimed: z.boolean(),
   limits: z.object({
@@ -439,8 +437,8 @@ export type CreditBalanceResponse = z.infer<typeof creditBalanceResponseSchema>;
 export const creditTransactionSchema = z.object({
   id: z.string().uuid(),
   transaction_type: creditTransactionTypeSchema,
-  amount: z.number().int(),
-  balance_after: z.number().int(),
+  amount: z.number(),
+  balance_after: z.number(),
   job_id: z.string().uuid().nullable(),
   description: z.string().nullable(),
   created_at: z.string(),

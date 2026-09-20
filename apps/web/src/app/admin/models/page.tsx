@@ -96,6 +96,7 @@ function ModelEditor({ model }: { model: any }) {
           <Input
             type="number"
             min="1"
+            step="0.01"
             value={credits}
             onChange={(e) => setCredits(Number(e.target.value))}
           />
@@ -231,6 +232,7 @@ function ModelCreatorDialog({
             <Input
               type="number"
               min="1"
+              step="0.01"
               value={form.creditPrice}
               onChange={(e) =>
                 setForm({ ...form, creditPrice: Number(e.target.value) })

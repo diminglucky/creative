@@ -27,7 +27,7 @@ export const runCancelResponseSchema = z.object({
 });
 
 export const viewerCreditsSchema = z.object({
-  balance: z.number().int(),
+  balance: z.number().nonnegative(),
   plan: z.string(),
   dailyClaimed: z.boolean(),
   limits: z.object({

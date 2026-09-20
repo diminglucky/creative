@@ -84,6 +84,7 @@ import { registerPaymentRoutes } from "./http/payments.js";
 import { registerAdminRoutes } from "./http/admin.js";
 import { registerPaymentWebhookRoute } from "./http/payments-webhook.js";
 import { registerCreditRoutes } from "./http/credits.js";
+import { registerPricingRoutes } from "./http/pricing.js";
 import { registerFontsRoutes } from "./http/fonts.js";
 import { registerJobRoutes } from "./http/jobs.js";
 import { registerBrandKitRoutes } from "./http/brand-kits.js";
@@ -362,6 +363,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     ...(tierGuard ? { tierGuard } : {}),
   });
   void registerCreditRoutes(app, { auth, creditService, viewerService });
+  void registerPricingRoutes(app, { auth, getAdminClient });
   if (jobService) {
     void registerJobRoutes(app, { auth, billingService, creditService, jobService, tierGuard, viewerService });
   }

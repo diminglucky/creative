@@ -18,6 +18,23 @@ export type SubscriptionStatus = {
 
 export type CreditPack = { id: string; name: string; credits: number; priceFen: number };
 
+export type CreditPricePreview = {
+  creditsPerYuan: number;
+  packs: CreditPack[];
+  imageModels: Array<{ id: string; displayName: string; creditCost: number }>;
+};
+
+export async function getCreditPricePreview(
+  accessToken: string,
+): Promise<CreditPricePreview> {
+  const response = await fetch(
+    `${getServerBaseUrl()}/api/pricing/credit-preview`,
+    { headers: authHeaders(accessToken) },
+  );
+  if (!response.ok) return handleErrorResponse(response);
+  return (await response.json()) as CreditPricePreview;
+}
+
 export async function getCreditPacks(accessToken: string): Promise<CreditPack[]> {
   const response = await fetch(`${getServerBaseUrl()}/api/payments/credit-packs`, { headers: authHeaders(accessToken) });
   if (!response.ok) return handleErrorResponse(response);

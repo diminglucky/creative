@@ -83,8 +83,8 @@ export function createBillingService(options: {
       const parsed = generationChargeSchema.safeParse({
         id: row?.charge_id,
         paymentMethod: row?.payment_method,
-        creditsCharged: row?.credits_charged,
-        moneyChargedFen: row?.money_charged_fen,
+        creditsCharged: Number(row?.credits_charged),
+        moneyChargedFen: Number(row?.money_charged_fen),
       });
       if (!parsed.success) {
         throw new BillingServiceError(

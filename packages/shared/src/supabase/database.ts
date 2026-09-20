@@ -1754,7 +1754,7 @@ export type Database = {
           p_reason: string
           p_user_id: string
         }
-        Returns: number
+        Returns: undefined
       }
       admin_overview_stats: { Args: never; Returns: Json }
       bootstrap_viewer: {
@@ -1792,7 +1792,7 @@ export type Database = {
         Args: {
           p_amount: number
           p_description?: string
-          p_job_id?: string
+          p_job_id: string
           p_user_id: string
           p_workspace_id: string
         }
