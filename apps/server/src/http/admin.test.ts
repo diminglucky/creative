@@ -11,6 +11,7 @@ function createApp(options?: { user?: { id: string; email?: string }; adminEmail
       recentAudit: [],
     }),
     listProviders: vi.fn().mockResolvedValue([]),
+    createProvider: vi.fn().mockResolvedValue(undefined),
     updateProvider: vi.fn().mockResolvedValue(undefined),
     discoverProviderModels: vi.fn().mockResolvedValue([{ id: "gpt-image-1", ownedBy: "openai" }]),
     listModels: vi.fn().mockResolvedValue([]),
@@ -65,6 +66,14 @@ describe("admin routes", () => {
     });
     expect(response.statusCode).toBe(400);
     expect(service.updateProvider).not.toHaveBeenCalled();
+  });
+
+  it("creates a new OpenAI-compatible provider", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    const payload = { id: "openrouter", name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", secret: "sk-test", enabled: true };
+    const response = await app.inject({ method: "POST", url: "/api/admin/providers", payload });
+    expect(response.statusCode).toBe(201);
+    expect(service.createProvider).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), payload);
   });
 
   it("adjusts a user's credit balance", async () => {

@@ -30,6 +30,7 @@ export const createAdminCreditPack=(t:string,data:unknown)=>request<void>(t,"/cr
 export const updateAdminCreditPack=(t:string,id:string,data:unknown)=>request<void>(t,`/credit-packs/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
 export const deleteAdminCreditPack=(t:string,id:string)=>request<void>(t,`/credit-packs/${encodeURIComponent(id)}`,{method:"DELETE"});
 export const updateAdminProvider = (t:string,id:string,data:unknown) => request<void>(t,`/providers/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
+export const createAdminProvider = (t:string,data:unknown) => request<void>(t,"/providers",{method:"POST",body:JSON.stringify(data)});
 export const discoverAdminProviderModels = (t:string,id:string,data:unknown) => request<any>(t,`/providers/${encodeURIComponent(id)}/models/discover`,{method:"POST",body:JSON.stringify(data)});
 export const createAdminModel = (t:string,data:unknown) => request<void>(t,"/models",{method:"POST",body:JSON.stringify(data)});
 export const updateAdminModel = (t:string,id:string,data:unknown) => request<void>(t,`/models/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});

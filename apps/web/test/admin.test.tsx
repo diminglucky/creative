@@ -13,6 +13,7 @@ const {
   mockFetchOrders,
   mockFetchLedger,
   mockUpdateProvider,
+  mockCreateProvider,
   mockUpdateModel,
   mockUpdatePlan,
   mockFetchCreditPackSettings,
@@ -31,6 +32,7 @@ const {
   mockFetchOrders: vi.fn(),
   mockFetchLedger: vi.fn(),
   mockUpdateProvider: vi.fn(),
+  mockCreateProvider: vi.fn(),
   mockUpdateModel: vi.fn(),
   mockUpdatePlan: vi.fn(),
   mockFetchCreditPackSettings: vi.fn(),
@@ -70,6 +72,7 @@ vi.mock("../src/lib/admin-api", async () => {
     fetchAdminOrders: mockFetchOrders,
     fetchAdminLedger: mockFetchLedger,
     updateAdminProvider: mockUpdateProvider,
+    createAdminProvider: mockCreateProvider,
     updateAdminModel: mockUpdateModel,
     updateAdminPlan: mockUpdatePlan,
     fetchAdminCreditPackSettings: mockFetchCreditPackSettings,
@@ -141,6 +144,7 @@ describe("admin console", () => {
     mockFetchOrders.mockResolvedValue({ orders: [] });
     mockFetchLedger.mockResolvedValue({ entries: [] });
     mockUpdateProvider.mockResolvedValue(undefined);
+    mockCreateProvider.mockResolvedValue(undefined);
     mockUpdateModel.mockResolvedValue(undefined);
     mockUpdatePlan.mockResolvedValue(undefined);
     mockFetchCreditPackSettings.mockResolvedValue({ creditsPerYuan: 10, packs: [] });

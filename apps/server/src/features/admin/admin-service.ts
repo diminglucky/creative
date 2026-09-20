@@ -171,6 +171,27 @@ export function createAdminService(options: {
         updatedAt: p.updated_at,
       }));
     },
+    async createProvider(actor: Actor, input: any) {
+      await assertPublicBaseUrl(input.baseUrl);
+      if (!options.secretCrypto) {
+        throw new Error("Provider secret encryption is not configured.");
+      }
+      const values = {
+        id: input.id,
+        name: input.name,
+        base_url: input.baseUrl,
+        secret_ciphertext: options.secretCrypto.encrypt(input.secret),
+        enabled: input.enabled,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await client().from("platform_providers").insert(values);
+      if (error) throw error;
+      await audit(actor, "provider.created", "provider", input.id, {
+        name: input.name,
+        baseUrl: input.baseUrl,
+        enabled: input.enabled,
+      });
+    },
     async updateProvider(actor: Actor, id: string, input: any) {
       const values: any = {
         base_url: input.baseUrl,
