@@ -185,13 +185,20 @@ const PLAN_ORDER: SubscriptionPlan[] = [
   "business",
 ];
 
+/** Check if a given plan meets (or exceeds) a minimum tier. */
+export function planMeetsTier(
+  userPlan: SubscriptionPlan,
+  minTier: SubscriptionPlan,
+): boolean {
+  return PLAN_ORDER.indexOf(userPlan) >= PLAN_ORDER.indexOf(minTier);
+}
+
 /** Check if a given plan meets the minimum tier required for a model. */
 export function canAccessModel(
   userPlan: SubscriptionPlan,
   modelId: string,
 ): boolean {
-  const minTier = MODEL_MIN_TIER[modelId] ?? "pro";
-  return PLAN_ORDER.indexOf(userPlan) >= PLAN_ORDER.indexOf(minTier);
+  return planMeetsTier(userPlan, MODEL_MIN_TIER[modelId] ?? "pro");
 }
 
 /** Get the plan config for a given plan. */

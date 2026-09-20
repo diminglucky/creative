@@ -13,20 +13,22 @@ export type WebEnv = {
   supabaseUrl: string;
 };
 
-export function loadWebEnv(overrides: Partial<WebEnv> = {}): WebEnv {
+export function loadWebEnv(
+  overrides: Partial<WebEnv> = {},
+  source: NodeJS.ProcessEnv = process.env,
+): WebEnv {
+  const sourceServerBaseUrl = source.NEXT_PUBLIC_SERVER_BASE_URL?.trim();
   return {
-    serverBaseUrl: overrides.serverBaseUrl ?? getServerBaseUrl(),
+    serverBaseUrl:
+      overrides.serverBaseUrl ?? sourceServerBaseUrl ?? defaultServerBaseUrl,
     supabaseUrl:
       overrides.supabaseUrl ??
-      requireEnv(
-        "NEXT_PUBLIC_SUPABASE_URL",
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-      ),
+      requireEnv("NEXT_PUBLIC_SUPABASE_URL", source.NEXT_PUBLIC_SUPABASE_URL),
     supabaseAnonKey:
       overrides.supabaseAnonKey ??
       requireEnv(
         "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        source.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       ),
   };
 }

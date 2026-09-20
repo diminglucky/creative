@@ -477,7 +477,7 @@ export function createAgentRunService(options: CreateAgentRuntimeOptions) {
             const sub = await options.creditService.getSubscription(workspaceId);
             const quality = (input.quality as ImageQualityLevel) ?? "hd";
             try {
-              options.tierGuard.checkModelAccess(sub.plan, input.model);
+              await options.tierGuard.checkModelAccess(sub.plan, input.model);
               options.tierGuard.checkResolution(sub.plan, quality);
               await options.tierGuard.checkConcurrency(workspaceId, sub.plan);
             } catch (err) {
@@ -686,7 +686,7 @@ export function createAgentRunService(options: CreateAgentRuntimeOptions) {
           if (options.creditService && options.tierGuard) {
             const sub = await options.creditService.getSubscription(workspaceId);
             try {
-              options.tierGuard.checkModelAccess(sub.plan, input.model);
+              await options.tierGuard.checkModelAccess(sub.plan, input.model);
               if (input.resolution) {
                 options.tierGuard.checkVideoResolution(sub.plan, input.resolution as any);
               }

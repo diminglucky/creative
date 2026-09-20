@@ -335,13 +335,13 @@ export function ChatSidebar({
       .then((kit) => {
         if (cancelled) return;
         setBrandKitMentionItems(
-          kit.assets.map((asset: { id: string; display_name: string; asset_type: string; text_content?: string; file_url?: string }) => ({
+          kit.assets.map((asset: { id: string; display_name: string; asset_type: "image" | "color" | "font" | "logo"; text_content: string | null; file_url: string | null }) => ({
             kind: "brand-kit-asset" as const,
             id: asset.id,
             label: asset.display_name,
             assetType: asset.asset_type,
-            textContent: asset.text_content,
-            fileUrl: asset.file_url,
+            ...(asset.text_content !== null ? { textContent: asset.text_content } : {}),
+            ...(asset.file_url !== null ? { fileUrl: asset.file_url } : {}),
             thumbnailUrl:
               asset.asset_type === "logo" || asset.asset_type === "image"
                 ? asset.file_url
@@ -415,7 +415,8 @@ export function ChatSidebar({
               id: mention.id,
               label: mention.label,
             }
-          : {
+          : mention.mentionType === "brand-kit-asset"
+            ? {
               type: "mention" as const,
               mentionType: "brand-kit-asset" as const,
               id: mention.id,
@@ -427,7 +428,14 @@ export function ChatSidebar({
               ...(mention.fileUrl !== undefined
                 ? { fileUrl: mention.fileUrl }
                 : {}),
-            },
+              }
+            : {
+                type: "mention" as const,
+                mentionType: "skill" as const,
+                id: mention.id,
+                label: mention.label,
+                slug: mention.slug,
+              },
       );
       const userMsg = {
         id: `user-${Date.now()}`,

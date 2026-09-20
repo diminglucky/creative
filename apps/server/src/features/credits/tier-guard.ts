@@ -7,12 +7,14 @@ import type {
   VideoResolution,
 } from "@creative/shared";
 import {
-  canAccessModel,
+  MODEL_MIN_TIER,
   canUseResolution,
   canUseVideoResolution,
   getImageCreditCost,
   getVideoCreditCost,
   PLAN_CONFIGS,
+  planMeetsTier,
+  subscriptionPlanSchema,
 } from "@creative/shared";
 
 import type { AdminSupabaseClient } from "../../supabase/admin.js";
@@ -40,7 +42,7 @@ export class TierGuardError extends Error {
 // ── Types ────────────────────────────────────────────────────
 
 export type TierGuard = {
-  checkModelAccess(plan: SubscriptionPlan, modelId: string): void;
+  checkModelAccess(plan: SubscriptionPlan, modelId: string): Promise<void>;
   checkResolution(plan: SubscriptionPlan, quality: ImageQualityLevel): void;
   checkVideoResolution(plan: SubscriptionPlan, resolution: VideoResolution): void;
   checkConcurrency(
@@ -56,12 +58,53 @@ export type TierGuard = {
 
 // ── Factory ──────────────────────────────────────────────────
 
+type MinimumTierQueryClient = {
+  from(table: "generation_prices"): {
+    select(columns: string): {
+      eq(
+        column: string,
+        value: string,
+      ): {
+        maybeSingle(): Promise<{
+          data: { minimum_plan: string } | null;
+          error: { message: string } | null;
+        }>;
+      };
+    };
+  };
+};
+
 export function createTierGuard(options: {
   getAdminClient: () => AdminSupabaseClient;
 }): TierGuard {
+  async function resolveMinimumTier(
+    modelId: string,
+  ): Promise<SubscriptionPlan> {
+    try {
+      const admin =
+        options.getAdminClient() as unknown as MinimumTierQueryClient;
+      const result = await admin
+        .from("generation_prices")
+        .select("minimum_plan")
+        .eq("model_id", modelId)
+        .maybeSingle();
+      if (!result.error) {
+        const value = result.data?.minimum_plan;
+        if (typeof value === "string") {
+          const parsed = subscriptionPlanSchema.safeParse(value);
+          if (parsed.success) return parsed.data;
+        }
+      }
+    } catch {
+      // Fall back to the static MODEL_MIN_TIER on any DB error.
+    }
+    return MODEL_MIN_TIER[modelId] ?? "pro";
+  }
+
   return {
-    checkModelAccess(plan, modelId) {
-      if (!canAccessModel(plan, modelId)) {
+    async checkModelAccess(plan, modelId) {
+      const minTier = await resolveMinimumTier(modelId);
+      if (!planMeetsTier(plan, minTier)) {
         throw new TierGuardError(
           "model_not_accessible",
           `Your ${plan} plan does not have access to model "${modelId}". Please upgrade your plan.`,

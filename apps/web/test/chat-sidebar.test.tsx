@@ -7,19 +7,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WebSocketHandle } from "../src/hooks/use-websocket";
 import { ChatSidebar } from "../src/components/chat-sidebar";
+import { TierLimitToastProvider } from "../src/components/credits/tier-limit-toast";
+import { ToastProvider } from "../src/components/toast";
 
 const {
   createSessionMock,
   deleteSessionMock,
+  fetchImageModelsMock,
   fetchMessagesMock,
+  fetchModelsMock,
   fetchSessionsMock,
+  fetchWorkspaceSkillsMock,
   saveMessageMock,
   updateSessionTitleMock,
 } = vi.hoisted(() => ({
   createSessionMock: vi.fn(),
   deleteSessionMock: vi.fn(),
+  fetchImageModelsMock: vi.fn(),
   fetchMessagesMock: vi.fn(),
+  fetchModelsMock: vi.fn(),
   fetchSessionsMock: vi.fn(),
+  fetchWorkspaceSkillsMock: vi.fn(),
   saveMessageMock: vi.fn(),
   updateSessionTitleMock: vi.fn(),
 }));
@@ -27,8 +35,11 @@ const {
 vi.mock("../src/lib/server-api", () => ({
   createSession: createSessionMock,
   deleteSession: deleteSessionMock,
+  fetchImageModels: fetchImageModelsMock,
   fetchMessages: fetchMessagesMock,
+  fetchModels: fetchModelsMock,
   fetchSessions: fetchSessionsMock,
+  fetchWorkspaceSkills: fetchWorkspaceSkillsMock,
   saveMessage: saveMessageMock,
   updateSessionTitle: updateSessionTitleMock,
 }));
@@ -47,6 +58,7 @@ function createMockWs(): WebSocketHandle {
     cancelRun: vi.fn(),
     onEvent: vi.fn(() => () => {}),
     registerRPC: vi.fn(() => () => {}),
+    resumeCanvas: vi.fn(),
   };
 }
 
@@ -57,6 +69,15 @@ describe("ChatSidebar", () => {
     Object.defineProperty(Element.prototype, "scrollIntoView", {
       configurable: true,
       value: vi.fn(),
+      writable: true,
+    });
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      value: vi.fn(() => ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      })),
       writable: true,
     });
     mockWs = createMockWs();
@@ -71,6 +92,10 @@ describe("ChatSidebar", () => {
     deleteSessionMock.mockReset();
     fetchMessagesMock.mockReset();
     fetchMessagesMock.mockResolvedValue({ messages: [] });
+    fetchImageModelsMock.mockReset();
+    fetchImageModelsMock.mockResolvedValue({ models: [] });
+    fetchModelsMock.mockReset();
+    fetchModelsMock.mockResolvedValue({ models: [] });
     fetchSessionsMock.mockReset();
     fetchSessionsMock.mockResolvedValue({
       sessions: [
@@ -83,6 +108,8 @@ describe("ChatSidebar", () => {
     });
     saveMessageMock.mockReset();
     saveMessageMock.mockResolvedValue(undefined);
+    fetchWorkspaceSkillsMock.mockReset();
+    fetchWorkspaceSkillsMock.mockResolvedValue({ skills: [] });
     updateSessionTitleMock.mockReset();
     updateSessionTitleMock.mockResolvedValue(undefined);
   });
@@ -95,13 +122,17 @@ describe("ChatSidebar", () => {
 
   it("starts runs via WebSocket with the active real session id", async () => {
     render(
-      <ChatSidebar
-        accessToken="token_abc"
-        canvasId="canvas-1"
-        open
-        onToggle={() => {}}
-        ws={mockWs}
-      />,
+      <ToastProvider>
+        <TierLimitToastProvider>
+          <ChatSidebar
+            accessToken="token_abc"
+            canvasId="canvas-1"
+            open
+            onToggle={() => {}}
+            ws={mockWs}
+          />
+        </TierLimitToastProvider>
+      </ToastProvider>,
     );
 
     const input = await screen.findByPlaceholderText(

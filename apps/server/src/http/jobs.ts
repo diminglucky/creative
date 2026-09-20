@@ -68,7 +68,7 @@ export async function registerJobRoutes(
         const planConfig = getPlanConfig(sub.plan);
         // Use the plan's max resolution as the quality for cost calculation
         const quality: ImageQualityLevel = planConfig.maxResolution;
-        options.tierGuard.checkModelAccess(sub.plan, model);
+        await options.tierGuard.checkModelAccess(sub.plan, model);
         await options.tierGuard.checkConcurrency(viewer.workspace.id, sub.plan);
         creditsCost = options.tierGuard.calculateCreditCost(
           model,
@@ -170,7 +170,7 @@ export async function registerJobRoutes(
         const sub = await options.creditService.getSubscription(
           viewer.workspace.id,
         );
-        options.tierGuard.checkModelAccess(sub.plan, model);
+        await options.tierGuard.checkModelAccess(sub.plan, model);
         await options.tierGuard.checkConcurrency(viewer.workspace.id, sub.plan);
         creditsCost = options.tierGuard.calculateCreditCost(
           model,

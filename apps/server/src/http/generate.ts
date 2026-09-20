@@ -119,7 +119,7 @@ export async function registerGenerateRoutes(
             );
           }
         } else {
-          options.tierGuard.checkModelAccess(sub.plan, model);
+          await options.tierGuard.checkModelAccess(sub.plan, model);
         }
         // Throws TierGuardError (resolution_not_allowed) if plan doesn't allow this quality
         options.tierGuard.checkResolution(sub.plan, quality);
@@ -294,7 +294,7 @@ export async function registerGenerateRoutes(
 
       if (options.creditService && options.tierGuard) {
         const sub = await options.creditService.getSubscription(workspaceId);
-        options.tierGuard.checkModelAccess(sub.plan, model);
+        await options.tierGuard.checkModelAccess(sub.plan, model);
         if (payload.resolution) {
           options.tierGuard.checkVideoResolution(
             sub.plan,

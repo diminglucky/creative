@@ -72,6 +72,10 @@ import {
   type ImageModelCatalog,
 } from "./features/billing/image-model-catalog.js";
 import {
+  createVideoModelCatalog,
+  type VideoModelCatalog,
+} from "./features/billing/video-model-catalog.js";
+import {
   createPaymentService,
   buildVariantMap,
   type PaymentService,
@@ -126,6 +130,7 @@ export type BuildAppOptions = {
   env?: Partial<ServerEnv>;
   jobService?: JobService;
   imageModelCatalog?: ImageModelCatalog;
+  videoModelCatalog?: VideoModelCatalog;
   paymentService?: PaymentService;
   tierGuard?: TierGuard;
   uploadService?: UploadService;
@@ -219,6 +224,8 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     options.dynamicImageService ?? createDynamicOpenAIImageService({ getAdminClient, secretCrypto: providerSecretCrypto });
   const imageModelCatalog =
     options.imageModelCatalog ?? createImageModelCatalog({ getAdminClient });
+  const videoModelCatalog =
+    options.videoModelCatalog ?? createVideoModelCatalog({ getAdminClient });
   const tierGuard =
     options.tierGuard ?? createTierGuard({ getAdminClient });
 
@@ -333,7 +340,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     imageModelCatalog,
     viewerService,
   });
-  void registerVideoModelRoutes(app, { auth, creditService, viewerService });
+  void registerVideoModelRoutes(app, { auth, creditService, videoModelCatalog, viewerService });
   void registerChatRoutes(app, {
     auth,
     chatService,
