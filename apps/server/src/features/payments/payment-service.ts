@@ -438,6 +438,40 @@ export function createPaymentService(options: {
   };
 }
 
+export function createUnconfiguredPaymentService(): PaymentService {
+  const fail = (): never => {
+    throw new PaymentServiceError(
+      "payment_not_configured",
+      "Payment provider is not configured. Add Lemon Squeezy credentials first.",
+      503,
+    );
+  };
+
+  return {
+    async listCreditPacks() {
+      return [];
+    },
+    async createCreditCheckout() {
+      return fail();
+    },
+    async createCheckout() {
+      return fail();
+    },
+    async handleWebhookEvent() {
+      return;
+    },
+    async getSubscriptionStatus() {
+      return fail();
+    },
+    async cancelSubscription() {
+      return fail();
+    },
+    async changePlan() {
+      return fail();
+    },
+  };
+}
+
 // ── Helpers ──────────────────────────────────────────────────
 
 async function findWorkspaceByLsSubscription(

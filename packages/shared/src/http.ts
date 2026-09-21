@@ -118,6 +118,8 @@ export const applicationErrorCodeSchema = z.enum([
   "resolution_not_allowed",
   "concurrency_limit",
   "variant_not_found",
+  "payment_not_configured",
+  "provider_not_configured",
   "checkout_failed",
   "generation_failed",
 ]);

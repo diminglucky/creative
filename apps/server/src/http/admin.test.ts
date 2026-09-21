@@ -76,6 +76,18 @@ describe("admin routes", () => {
     expect(service.createProvider).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), payload);
   });
 
+  it("returns a conflict for duplicate supplier IDs", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    service.createProvider.mockRejectedValueOnce({ code: "23505" });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/admin/providers",
+      payload: { id: "openrouter", name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", secret: "sk-test", enabled: true },
+    });
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.message).toContain("供应商标识已存在");
+  });
+
   it("adjusts a user's credit balance", async () => {
     const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
     const response = await app.inject({ method: "POST", url: "/api/admin/users/user-1/adjust", payload: { amount: 500, reason: "manual recharge" } });
@@ -112,6 +124,18 @@ describe("admin routes", () => {
     const response = await app.inject({ method: "POST", url: "/api/admin/credit-packs", payload });
     expect(response.statusCode).toBe(201);
     expect(service.createCreditPack).toHaveBeenCalledWith(expect.objectContaining({ id: "admin-1" }), payload);
+  });
+
+  it("returns a conflict for duplicate credit pack IDs", async () => {
+    const { app, service } = createApp({ user: { id: "admin-1", email: "root@example.com" } });
+    service.createCreditPack.mockRejectedValueOnce({ code: "23505" });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/admin/credit-packs",
+      payload: { id: "launch-100", name: "100 元档", amountFen: 10000, bonusCredits: 200, lemonSqueezyVariantId: "12345", enabled: true },
+    });
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.message).toContain("充值档位标识已存在");
   });
 
   it("updates the global RMB conversion ratio", async () => {

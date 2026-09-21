@@ -77,6 +77,7 @@ import {
 } from "./features/billing/video-model-catalog.js";
 import {
   createPaymentService,
+  createUnconfiguredPaymentService,
   buildVariantMap,
   type PaymentService,
 } from "./features/payments/payment-service.js";
@@ -230,21 +231,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const tierGuard =
     options.tierGuard ?? createTierGuard({ getAdminClient });
 
-  // Payment service — only created when Lemon Squeezy is configured
-  let paymentService: PaymentService | undefined = options.paymentService;
-  if (!paymentService && env.lemonSqueezyApiKey && env.lemonSqueezyStoreId) {
-    const lsClient = createLemonSqueezyClient({
-      apiKey: env.lemonSqueezyApiKey,
-      storeId: env.lemonSqueezyStoreId,
-    });
-    paymentService = createPaymentService({
-      lemonSqueezy: lsClient,
-      getAdminClient,
-      variantMap: buildVariantMap(env),
-      webOrigin: env.webOrigin,
-    });
-  }
-
+  const paymentConfigured = Boolean(env.lemonSqueezyApiKey && env.lemonSqueezyStoreId);
+  const paymentService: PaymentService =
+    options.paymentService ??
+    (paymentConfigured
+      ? createPaymentService({
+          lemonSqueezy: createLemonSqueezyClient({
+            apiKey: env.lemonSqueezyApiKey!,
+            storeId: env.lemonSqueezyStoreId!,
+          }),
+          getAdminClient,
+          variantMap: buildVariantMap(env),
+          webOrigin: env.webOrigin,
+        })
+      : createUnconfiguredPaymentService());
   const connectionManager = options.connectionManager ?? new ConnectionManager();
   const eventBuffer = new CanvasEventBuffer();
   setInterval(() => eventBuffer.cleanup(), 5 * 60 * 1000);
@@ -370,22 +370,20 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   void registerSkillRoutes(app, { auth, createUserClient, viewerService });
   void registerMarketplaceRoutes(app, { auth, createUserClient, viewerService });
 
-  // Payment routes — only registered when Lemon Squeezy is configured
-  if (paymentService) {
-    void registerPaymentRoutes(app, { auth, paymentService, viewerService });
+  // Payment routes always exist so missing provider configuration is explicit.
+  void registerPaymentRoutes(app, { auth, paymentService, viewerService });
 
-    if (env.lemonSqueezyWebhookSecret) {
-      // Webhook route is registered in an encapsulated plugin so the custom
-      // content-type parser (needed for raw body access) does not leak to
-      // other routes.
-      void app.register(async (webhookScope) => {
-        await registerPaymentWebhookRoute(webhookScope, {
-          getAdminClient,
-          paymentService: paymentService!,
-          webhookSecret: env.lemonSqueezyWebhookSecret!,
-        });
+  if (paymentConfigured && env.lemonSqueezyWebhookSecret) {
+    // Webhook route is registered in an encapsulated plugin so the custom
+    // content-type parser (needed for raw body access) does not leak to
+    // other routes.
+    void app.register(async (webhookScope) => {
+      await registerPaymentWebhookRoute(webhookScope, {
+        getAdminClient,
+        paymentService,
+        webhookSecret: env.lemonSqueezyWebhookSecret!,
       });
-    }
+    });
   }
 
   return app;
