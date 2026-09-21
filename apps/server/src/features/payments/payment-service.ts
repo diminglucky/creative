@@ -492,8 +492,8 @@ async function grantMonthlyCredits(
   workspaceId: string,
   plan: SubscriptionPlan,
 ): Promise<void> {
-  const config = PLAN_CONFIGS[plan];
-  if (config.monthlyCredits <= 0) return;
+  const monthlyCredits = await resolveMonthlyCredits(admin, plan);
+  if (monthlyCredits <= 0) return;
 
   const { data: balanceRow } = await admin
     .from("credit_balances")
@@ -502,7 +502,7 @@ async function grantMonthlyCredits(
     .maybeSingle();
 
   if (balanceRow) {
-    const newBalance = (balanceRow.balance ?? 0) + config.monthlyCredits;
+    const newBalance = (balanceRow.balance ?? 0) + monthlyCredits;
     await admin
       .from("credit_balances")
       .update({
@@ -515,7 +515,7 @@ async function grantMonthlyCredits(
     await admin.from("credit_transactions").insert({
       workspace_id: workspaceId,
       transaction_type: "subscription_grant",
-      amount: config.monthlyCredits,
+      amount: monthlyCredits,
       balance_after: newBalance,
       description: `${plan} plan — monthly credits granted`,
     });
@@ -523,18 +523,35 @@ async function grantMonthlyCredits(
     // Create balance row if it doesn't exist
     await admin.from("credit_balances").insert({
       workspace_id: workspaceId,
-      balance: config.monthlyCredits,
+      balance: monthlyCredits,
       version: 1,
     });
 
     await admin.from("credit_transactions").insert({
       workspace_id: workspaceId,
       transaction_type: "subscription_grant",
-      amount: config.monthlyCredits,
-      balance_after: config.monthlyCredits,
+      amount: monthlyCredits,
+      balance_after: monthlyCredits,
       description: `${plan} plan — initial monthly credits granted`,
     });
   }
+}
+
+async function resolveMonthlyCredits(
+  admin: AdminSupabaseClient,
+  plan: SubscriptionPlan,
+): Promise<number> {
+  const { data, error } = await (admin as any)
+    .from("billing_plans")
+    .select("included_credits")
+    .eq("id", plan)
+    .eq("enabled", true)
+    .maybeSingle();
+  const configured = Number(data?.included_credits);
+  if (!error && Number.isFinite(configured) && configured >= 0) {
+    return configured;
+  }
+  return PLAN_CONFIGS[plan].monthlyCredits;
 }
 
 // ── Variant map builder ──────────────────────────────────────

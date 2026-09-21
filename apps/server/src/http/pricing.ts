@@ -15,6 +15,35 @@ export async function registerPricingRoutes(
     getAdminClient: () => AdminSupabaseClient;
   },
 ) {
+  app.get("/api/pricing/plans", async (_request, reply) => {
+    const { data, error } = await (options.getAdminClient() as any)
+      .from("billing_plans")
+      .select("id,name,description,monthly_price_fen,yearly_price_fen,included_credits,benefits,enabled")
+      .eq("enabled", true)
+      .order("monthly_price_fen");
+    if (error) {
+      return reply.code(500).send(
+        applicationErrorResponseSchema.parse({
+          error: {
+            code: "application_error",
+            message: "Unable to load subscription plans.",
+          },
+        }),
+      );
+    }
+    return reply.code(200).send({
+      plans: (data ?? []).map((plan: any) => ({
+        id: plan.id,
+        name: plan.name,
+        description: plan.description,
+        monthlyPriceFen: plan.monthly_price_fen,
+        yearlyPriceFen: plan.yearly_price_fen,
+        includedCredits: plan.included_credits,
+        benefits: plan.benefits ?? [],
+      })),
+    });
+  });
+
   app.get("/api/pricing/credit-preview", async (request, reply) => {
     const user = await options.auth.authenticate(request);
     if (!user) {

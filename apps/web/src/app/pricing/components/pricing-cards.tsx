@@ -8,12 +8,14 @@ import { PricingCard } from "./pricing-card";
 
 interface PricingCardsProps {
   billingPeriod: BillingPeriod;
+  tiers?: import("./pricing-data").PricingTier[] | undefined;
   currentPlan?: string | null | undefined;
   onCheckout?: ((plan: string, billingPeriod: BillingPeriod) => Promise<void>) | undefined;
 }
 
 export function PricingCards({
   billingPeriod,
+  tiers = pricingTiers,
   currentPlan,
   onCheckout,
 }: PricingCardsProps) {
@@ -25,7 +27,7 @@ export function PricingCards({
       viewport={{ once: true, amount: 0.2 }}
       className="mx-auto grid max-w-7xl grid-cols-1 gap-6 md:grid-cols-3 xl:grid-cols-5"
     >
-      {pricingTiers.map((tier, index) => (
+      {tiers.map((tier, index) => (
         <PricingCard
           key={tier.id}
           tier={tier}

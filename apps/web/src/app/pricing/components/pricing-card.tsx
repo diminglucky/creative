@@ -139,7 +139,7 @@ export function PricingCard({
             className="flex items-baseline gap-1"
           >
             <span className="text-foreground text-4xl font-bold">
-              ${price}
+              ¥{price}
             </span>
             <span className="text-muted-foreground text-sm">/month</span>
           </motion.div>

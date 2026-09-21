@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Settings } from "lucide-react";
 
 import { useAuth } from "@/lib/auth-context";
-import { createCheckout } from "@/lib/payments-api";
+import { createCheckout, getBillingPlans } from "@/lib/payments-api";
 import { useSubscription } from "@/hooks/use-subscription";
 
-import type { BillingPeriod } from "./components/pricing-data";
+import type { BillingPeriod, PricingTier } from "./components/pricing-data";
+import { pricingTiers } from "./components/pricing-data";
 import { PricingNav } from "./components/pricing-nav";
 import { PricingHero } from "./components/pricing-hero";
 import { PricingToggle } from "./components/pricing-toggle";
@@ -27,8 +28,34 @@ function openLemonCheckout(url: string) {
 
 export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("yearly");
+  const [tiers, setTiers] = useState<PricingTier[]>(pricingTiers);
   const { session } = useAuth();
   const { subscription } = useSubscription();
+
+  useEffect(() => {
+    void getBillingPlans()
+      .then((plans) => {
+        setTiers((current) =>
+          current.map((tier) => {
+            const plan = plans.find((item) => item.id === tier.id);
+            if (!plan) return tier;
+            return {
+              ...tier,
+              name: plan.name || tier.name,
+              description: plan.description || tier.description,
+              monthlyPrice: plan.monthlyPriceFen / 100,
+              yearlyPrice: plan.yearlyPriceFen / 100,
+              credits: plan.includedCredits,
+              creditLabel:
+                tier.id === "free"
+                  ? tier.creditLabel
+                  : `${plan.includedCredits.toLocaleString()} 积分/月`,
+            };
+          }),
+        );
+      })
+      .catch(() => undefined);
+  }, []);
 
   const handleCheckout = useCallback(
     async (plan: string, period: BillingPeriod) => {
@@ -82,6 +109,7 @@ export default function PricingPage() {
           </div>
           <PricingCards
             billingPeriod={billingPeriod}
+            tiers={tiers}
             currentPlan={subscription?.plan ?? null}
             onCheckout={handleCheckout}
           />

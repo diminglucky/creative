@@ -47,8 +47,8 @@ export const pricingTiers: PricingTier[] = [
     description: "体验 AI 创作的魔力",
     monthlyPrice: 0,
     yearlyPrice: 0,
-    credits: 1500,
-    creditLabel: "50 积分/天",
+    credits: 50,
+    creditLabel: "注册送 50 试用积分",
     features: [
       "3 款基础图片模型",
       "最高 1K 分辨率",

@@ -24,6 +24,22 @@ export type CreditPricePreview = {
   imageModels: Array<{ id: string; displayName: string; creditCost: number }>;
 };
 
+export type PublicBillingPlan = {
+  id: string;
+  name: string;
+  description: string;
+  monthlyPriceFen: number;
+  yearlyPriceFen: number;
+  includedCredits: number;
+  benefits: string[];
+};
+
+export async function getBillingPlans(): Promise<PublicBillingPlan[]> {
+  const response = await fetch(`${getServerBaseUrl()}/api/pricing/plans`);
+  if (!response.ok) return handleErrorResponse(response);
+  return ((await response.json()) as { plans: PublicBillingPlan[] }).plans;
+}
+
 export async function getCreditPricePreview(
   accessToken: string,
 ): Promise<CreditPricePreview> {
