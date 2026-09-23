@@ -22,12 +22,12 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      title="Create a workspace account"
-      description="Register with email and password, then come back to the same canvas from any device."
+      title="创建工作区账号"
+      description="支持邮箱或手机号注册，随后可在任意设备回到同一个画布。"
       features={[
-        "Create a dedicated account with email and password",
-        "Return to your workspace after confirming your email",
-        "Use the same workspace layout as signed-in users",
+        "使用邮箱或手机号创建账号",
+        "注册后自动进入工作区",
+        "与登录用户使用同一套工作区体验",
       ]}
     >
       <RegisterForm />

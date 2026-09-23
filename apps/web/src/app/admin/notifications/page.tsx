@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,27 @@ function NotificationSettingsForm({
   const [testEmail, setTestEmail] = useState("");
   const [testPhone, setTestPhone] = useState("");
   const [testing, setTesting] = useState<"email" | "sms" | null>(null);
+  const smsLabels =
+    form.smsProvider === "twilio"
+      ? {
+          accessKeyId: "Twilio Account SID",
+          accessKeySecret: "Twilio Auth Token",
+          appId: "Twilio 发送号码",
+          region: "无需填写",
+        }
+      : form.smsProvider === "tencent"
+        ? {
+            accessKeyId: "腾讯云 SecretId",
+            accessKeySecret: "腾讯云 SecretKey",
+            appId: "短信 SdkAppId",
+            region: "地域，例如 ap-guangzhou",
+          }
+        : {
+            accessKeyId: "阿里云 AccessKey ID",
+            accessKeySecret: "阿里云 AccessKey Secret",
+            appId: "无需填写",
+            region: "地域，例如 cn-hangzhou",
+          };
 
   async function save() {
     setSaving(true);
@@ -236,7 +257,7 @@ function NotificationSettingsForm({
             </select>
           </label>
           <label className="text-sm">
-            AccessKey ID
+            {smsLabels.accessKeyId}
             <Input
               value={form.smsAccessKeyId}
               placeholder={settings.smsAccessKeyIdMask || "留空将保留当前值"}
@@ -246,7 +267,7 @@ function NotificationSettingsForm({
             />
           </label>
           <label className="text-sm">
-            AccessKey Secret
+            {smsLabels.accessKeySecret}
             <Input
               type="password"
               value={form.smsAccessKeySecret}
@@ -282,11 +303,11 @@ function NotificationSettingsForm({
               onChange={(e) =>
                 setForm({ ...form, smsRegion: e.target.value })
               }
-              placeholder="例如：cn-hangzhou"
+              placeholder={smsLabels.region}
             />
           </label>
           <label className="text-sm">
-            App ID
+            {smsLabels.appId}
             <Input
               value={form.smsAppId}
               onChange={(e) => setForm({ ...form, smsAppId: e.target.value })}
@@ -324,37 +345,16 @@ function NotificationSettingsForm({
 
 export default function NotificationsPage() {
   const load = useCallback(fetchAdminNotificationSettings, []);
-  const [settings, setSettings] = useState<any>(null);
-  const [error, setError] = useState("");
-  const { session } = useAuth();
-
-  useEffect(() => {
-    if (!session?.access_token) return;
-    void fetchAdminNotificationSettings(session.access_token)
-      .then(setSettings)
-      .catch((e) =>
-        setError(e instanceof Error ? e.message : "加载通知配置失败"),
-      );
-  }, [session?.access_token]);
 
   return (
     <AdminView title="通知与验证" load={load}>
-      {() =>
-        error ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : settings ? (
-          <NotificationSettingsForm
-            settings={settings}
-            onSaved={() => {
-              if (session?.access_token) {
-                void fetchAdminNotificationSettings(session.access_token).then(
-                  setSettings,
-                );
-              }
-            }}
-          />
-        ) : null
-      }
+      {(settings: any, reload) => (
+        <NotificationSettingsForm
+          key={settings.updatedAt}
+          settings={settings}
+          onSaved={reload}
+        />
+      )}
     </AdminView>
   );
 }

@@ -47,7 +47,7 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
       await fetchViewer(accessToken);
       router.replace("/home");
     } catch {
-      setError("Could not load your workspace. Please try again.");
+      setError("无法加载工作区，请重试。");
     }
   }
 
@@ -98,7 +98,7 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
       const accessToken = data.session?.access_token;
       if (!accessToken) {
         setLoading(false);
-        setError("Could not finish signing in. Please try again.");
+        setError("无法完成登录，请重试。");
         return;
       }
 
@@ -150,9 +150,9 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
                 />
               </svg>
             </motion.div>
-            <h2 className="text-lg font-semibold">Check your email</h2>
+            <h2 className="text-lg font-semibold">请查收邮件</h2>
             <p className="text-sm text-muted-foreground">
-              We sent a login link to <strong>{email}</strong>
+              我们已发送登录链接到 <strong>{email}</strong>
             </p>
           </motion.div>
         ) : (
@@ -165,9 +165,9 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
             className="space-y-6"
           >
             <motion.div variants={fadeIn} className="space-y-2 text-center">
-              <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
+              <h2 className="text-2xl font-semibold tracking-tight">欢迎回来</h2>
               <p className="text-sm text-muted-foreground">
-                Sign in to your workspace
+                登录你的工作空间
               </p>
             </motion.div>
 
@@ -210,10 +210,10 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">
-                  {mode === "password" && loginMethod === "phone"
-                    ? "手机号"
-                    : "Email"}
+                  <Label htmlFor="email">
+                    {mode === "password" && loginMethod === "phone"
+                      ? "手机号"
+                      : "邮箱"}
                 </Label>
                 <Input
                   id="email"
@@ -242,7 +242,7 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
               </div>
               {mode === "password" && (
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">密码</Label>
                   <Input
                     id="password"
                     type="password"
@@ -255,8 +255,8 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
               )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading
-                  ? mode === "password" ? "Signing in..." : "Sending..."
-                  : mode === "password" ? "Sign in" : "Send login link"}
+                  ? mode === "password" ? "正在登录..." : "正在发送..."
+                  : mode === "password" ? "登录" : "发送登录链接"}
               </Button>
               <button
                 type="button"
@@ -266,13 +266,13 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
                 }}
                 className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                {mode === "password" ? "Use login link instead" : "Use password instead"}
+                {mode === "password" ? "改用登录链接" : "改用密码"}
               </button>
             </motion.form>
 
             <motion.div variants={fadeIn} className="flex items-center gap-4">
               <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground uppercase">or</span>
+              <span className="text-xs text-muted-foreground uppercase">或</span>
               <Separator className="flex-1" />
             </motion.div>
 
@@ -283,14 +283,14 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
                 onClick={handleGoogle}
                 type="button"
               >
-                Continue with Google
+                使用 Google 继续
               </Button>
             </motion.div>
 
             <motion.p variants={fadeIn} className="text-center text-sm text-muted-foreground">
-              Need an account?{" "}
+              还没有账号？{" "}
               <Link href="/register" className="font-medium text-foreground underline underline-offset-4">
-                Create one
+                创建账号
               </Link>
             </motion.p>
           </motion.div>

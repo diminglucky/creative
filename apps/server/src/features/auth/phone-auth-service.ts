@@ -1,6 +1,7 @@
 import { createHmac, randomInt } from "node:crypto";
 
 import type { AdminSupabaseClient } from "../../supabase/admin.js";
+import { NotificationServiceError } from "../notifications/notification-service.js";
 import type { NotificationService } from "../notifications/notification-service.js";
 
 export class PhoneAuthError extends Error {
@@ -12,6 +13,7 @@ export class PhoneAuthError extends Error {
       | "code_invalid"
       | "code_expired"
       | "code_consumed"
+      | "otp_not_configured"
       | "user_create_failed",
     message: string,
     readonly statusCode: number,
@@ -51,6 +53,13 @@ export function createPhoneAuthService(options: {
 
   return {
     async sendCode(phone, requestIp) {
+      if (!options.otpSecret) {
+        throw new PhoneAuthError(
+          "otp_not_configured",
+          "验证码服务未配置安全密钥。",
+          503,
+        );
+      }
       if (!PHONE_RE.test(phone)) {
         throw new PhoneAuthError(
           "invalid_phone",
@@ -60,6 +69,10 @@ export function createPhoneAuthService(options: {
       }
       const since = new Date(Date.now() - MIN_RESEND_MS).toISOString();
       const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      await client()
+        .from("phone_verification_codes")
+        .delete()
+        .lt("expires_at", new Date().toISOString());
       const [recent, hourly] = await Promise.all([
         client()
           .from("phone_verification_codes")
@@ -87,6 +100,20 @@ export function createPhoneAuthService(options: {
           429,
         );
       }
+      if (requestIp) {
+        const { count: ipCount } = await client()
+          .from("phone_verification_codes")
+          .select("id", { count: "exact", head: true })
+          .eq("request_ip", requestIp)
+          .gte("created_at", hourAgo);
+        if ((ipCount ?? 0) >= 20) {
+          throw new PhoneAuthError(
+            "rate_limited",
+            "当前网络发送次数过多，请稍后再试。",
+            429,
+          );
+        }
+      }
 
       const code = String(randomInt(100000, 1000000));
       const { error } = await client().from("phone_verification_codes").insert({
@@ -100,6 +127,13 @@ export function createPhoneAuthService(options: {
       try {
         await options.notificationService.sendSmsCode(phone, code);
       } catch (error) {
+        if (error instanceof NotificationServiceError) {
+          throw new PhoneAuthError(
+            "sms_send_failed",
+            error.message,
+            error.code === "notification_not_configured" ? 503 : 502,
+          );
+        }
         throw new PhoneAuthError(
           "sms_send_failed",
           error instanceof Error ? error.message : "验证码发送失败。",
@@ -109,6 +143,13 @@ export function createPhoneAuthService(options: {
     },
 
     async register(input) {
+      if (!options.otpSecret) {
+        throw new PhoneAuthError(
+          "otp_not_configured",
+          "验证码服务未配置安全密钥。",
+          503,
+        );
+      }
       if (!PHONE_RE.test(input.phone)) {
         throw new PhoneAuthError(
           "invalid_phone",

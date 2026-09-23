@@ -41,7 +41,7 @@ export function RegisterForm() {
       await fetchViewer(accessToken);
       router.replace("/home");
     } catch {
-      setError("Could not finish creating your workspace. Please try again.");
+      setError("无法完成工作区创建，请重试。");
     }
   }
 
@@ -49,7 +49,8 @@ export function RegisterForm() {
     e.preventDefault();
     const trimmed = email.trim();
     if (mode === "phone") {
-      if (!phone.trim() || !otp || !password) return;
+      const normalizedPhone = normalizePhone(phone);
+      if (!normalizedPhone || !otp || !password) return;
       if (password !== confirmPassword) {
         setError("Passwords do not match");
         return;
@@ -58,13 +59,13 @@ export function RegisterForm() {
       setError(null);
       try {
         await registerPhone({
-          phone: phone.trim(),
+          phone: normalizedPhone,
           code: otp,
           password,
         });
         const supabase = getSupabaseBrowserClient();
         const { data, error: authError } = await supabase.auth.signInWithPassword({
-          phone: phone.trim(),
+          phone: normalizedPhone,
           password,
         });
         if (authError || !data.session?.access_token) {
@@ -115,8 +116,14 @@ export function RegisterForm() {
     setSent(true);
   }
 
+  function normalizePhone(value: string) {
+    const trimmed = value.trim().replace(/\s+/g, "");
+    if (/^1\d{10}$/.test(trimmed)) return `+86${trimmed}`;
+    return trimmed;
+  }
+
   async function handleSendCode() {
-    const trimmed = phone.trim();
+      const trimmed = normalizePhone(phone);
     if (!trimmed) return;
     setError(null);
     try {
@@ -164,12 +171,12 @@ export function RegisterForm() {
                 />
               </svg>
             </motion.div>
-            <h2 className="text-lg font-semibold">Check your email</h2>
+            <h2 className="text-lg font-semibold">请查收邮件</h2>
             <p className="text-sm text-muted-foreground">
-              We sent a confirmation link to <strong>{email}</strong>
+              我们已发送确认链接到 <strong>{email}</strong>
             </p>
             <Link href="/login" className="text-sm text-foreground underline underline-offset-4">
-              Back to sign in
+              返回登录
             </Link>
           </motion.div>
         ) : (
@@ -182,9 +189,9 @@ export function RegisterForm() {
             className="space-y-6"
           >
             <motion.div variants={fadeIn} className="space-y-2 text-center">
-              <h2 className="text-2xl font-semibold tracking-tight">Create your account</h2>
+              <h2 className="text-2xl font-semibold tracking-tight">创建账号</h2>
               <p className="text-sm text-muted-foreground">
-                Start with email and password
+                使用邮箱或手机号注册
               </p>
             </motion.div>
 
@@ -210,7 +217,7 @@ export function RegisterForm() {
               </div>
               {mode === "email" ? (
                 <div className="space-y-2">
-                  <Label htmlFor="register-email">Email</Label>
+                  <Label htmlFor="register-email">邮箱</Label>
                   <Input
                     id="register-email"
                     type="email"
@@ -255,7 +262,7 @@ export function RegisterForm() {
                 </>
               )}
               <div className="space-y-2">
-                <Label htmlFor="register-password">Password</Label>
+                <Label htmlFor="register-password">密码</Label>
                 <Input
                   id="register-password"
                   type="password"
@@ -266,7 +273,7 @@ export function RegisterForm() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="register-confirm-password">Confirm password</Label>
+                <Label htmlFor="register-confirm-password">确认密码</Label>
                 <Input
                   id="register-confirm-password"
                   type="password"
@@ -277,7 +284,7 @@ export function RegisterForm() {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Creating account..." : "Create account"}
+                {loading ? "正在创建账号..." : "创建账号"}
               </Button>
             </motion.form>
 
@@ -297,14 +304,14 @@ export function RegisterForm() {
 
             <motion.div variants={fadeIn} className="flex items-center gap-4">
               <Separator className="flex-1" />
-              <span className="text-xs uppercase text-muted-foreground">or</span>
+              <span className="text-xs uppercase text-muted-foreground">或</span>
               <Separator className="flex-1" />
             </motion.div>
 
             <motion.p variants={fadeIn} className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
+              已有账号？{" "}
               <Link href="/login" className="font-medium text-foreground underline underline-offset-4">
-                Sign in
+                登录
               </Link>
             </motion.p>
           </motion.div>

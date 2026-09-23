@@ -84,11 +84,11 @@ describe("Login page", () => {
       </AuthProvider>,
     );
     expect((await screen.findByText(/Creative/)).textContent).toContain("Creative");
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /^sign in$/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /use login link instead/i })).toBeInTheDocument();
-    expect(screen.getByText(/Continue with Google/i).textContent).toContain("Continue with Google");
-    expect(screen.getByRole("link", { name: /create one/i }).getAttribute("href")).toBe("/register");
+    expect(screen.getByLabelText(/密码/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "登录" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /改用登录链接/ })).toBeInTheDocument();
+    expect(screen.getByText(/使用 Google 继续/).textContent).toContain("使用 Google 继续");
+    expect(screen.getByRole("link", { name: "创建账号" }).getAttribute("href")).toBe("/register");
   });
 
   it("shows callback errors from the query string as a banner", async () => {
@@ -101,7 +101,7 @@ describe("Login page", () => {
     );
 
     expect((await screen.findByRole("alert")).textContent).toContain(
-      "This sign-in link could not be verified. Request a new one and try again.",
+      "登录链接校验失败，请重新获取。",
     );
   });
 
@@ -112,11 +112,11 @@ describe("Login page", () => {
       </AuthProvider>,
     );
 
-    fireEvent.click(await screen.findByRole("button", { name: /use login link instead/i }));
-    fireEvent.change(screen.getByLabelText(/email/i), {
+    fireEvent.click(await screen.findByRole("button", { name: /改用登录链接/ }));
+    fireEvent.change(screen.getByLabelText(/邮箱/), {
       target: { value: "user@example.com" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /send login link/i }));
+    fireEvent.click(screen.getByRole("button", { name: "发送登录链接" }));
 
     await waitFor(() => {
       expect(mockSignInWithOtp).toHaveBeenCalledWith({
@@ -136,13 +136,13 @@ describe("Login page", () => {
       </AuthProvider>,
     );
 
-    fireEvent.change(await screen.findByLabelText(/email/i), {
+    fireEvent.change(await screen.findByLabelText(/邮箱/), {
       target: { value: "user@example.com" },
     });
-    fireEvent.change(screen.getByLabelText(/password/i), {
+    fireEvent.change(screen.getByLabelText(/密码/), {
       target: { value: "password-123" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.click(screen.getByRole("button", { name: "登录" }));
 
     await waitFor(() => {
       expect(mockSignInWithPassword).toHaveBeenCalledWith({
@@ -158,9 +158,9 @@ describe("Login page", () => {
   it("redirects the configured administrator to the admin panel", async () => {
     mockIsAdminSession.mockResolvedValue(true);
     render(<AuthProvider><LoginPage /></AuthProvider>);
-    fireEvent.change(await screen.findByLabelText(/email/i), { target: { value: "pro@test.creative.com" } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "opensourcecreative" } });
-    fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+    fireEvent.change(await screen.findByLabelText(/邮箱/), { target: { value: "pro@test.creative.com" } });
+    fireEvent.change(screen.getByLabelText(/密码/), { target: { value: "opensourcecreative" } });
+    fireEvent.click(screen.getByRole("button", { name: "登录" }));
     await waitFor(() => {
       expect(mockReplace).toHaveBeenCalledWith("/admin");
       expect(mockFetchViewer).not.toHaveBeenCalled();

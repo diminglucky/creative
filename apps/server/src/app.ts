@@ -203,7 +203,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     createPhoneAuthService({
       getAdminClient,
       notificationService,
-      otpSecret: env.providerSecretsEncryptionKey ?? "creative-phone-otp",
+      otpSecret: env.providerSecretsEncryptionKey ?? "",
     });
   const projectService =
     options.projectService ??

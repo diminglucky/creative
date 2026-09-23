@@ -62,9 +62,13 @@ function sendPhoneAuthError(
   fallbackCode: "sms_send_failed" | "user_create_failed",
 ) {
   if (error instanceof PhoneAuthError) {
+    const status = error.statusCode;
     return reply.code(error.statusCode).send(
       applicationErrorResponseSchema.parse({
-        error: { code: "invalid_request", message: error.message },
+        error: {
+          code: status === 400 ? "invalid_request" : "application_error",
+          message: error.message,
+        },
       }),
     );
   }
