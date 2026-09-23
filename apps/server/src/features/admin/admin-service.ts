@@ -192,6 +192,90 @@ export function createAdminService(options: {
         enabled: input.enabled,
       });
     },
+    async getNotificationSettings() {
+      const { data, error } = await client()
+        .from("platform_notification_settings")
+        .select("*")
+        .eq("id", "default")
+        .single();
+      if (error) throw error;
+      return {
+        smtpEnabled: data.smtp_enabled,
+        smtpHost: data.smtp_host ?? "",
+        smtpPort: data.smtp_port,
+        smtpSecure: data.smtp_secure,
+        smtpUsername: data.smtp_username ?? "",
+        smtpPasswordMask: data.smtp_password_ciphertext
+          ? (options.secretCrypto?.mask(data.smtp_password_ciphertext) ?? "已配置")
+          : "",
+        smtpFromEmail: data.smtp_from_email ?? "",
+        smtpFromName: data.smtp_from_name ?? "",
+        smsEnabled: data.sms_enabled,
+        smsProvider: data.sms_provider,
+        smsAccessKeyIdMask: data.sms_access_key_id_ciphertext
+          ? (options.secretCrypto?.mask(data.sms_access_key_id_ciphertext) ?? "已配置")
+          : "",
+        smsAccessKeySecretMask: data.sms_access_key_secret_ciphertext
+          ? (options.secretCrypto?.mask(data.sms_access_key_secret_ciphertext) ?? "已配置")
+          : "",
+        smsSignName: data.sms_sign_name ?? "",
+        smsTemplateCode: data.sms_template_code ?? "",
+        smsRegion: data.sms_region ?? "",
+        smsAppId: data.sms_app_id ?? "",
+        updatedAt: data.updated_at,
+      };
+    },
+    async updateNotificationSettings(actor: Actor, input: any) {
+      const values: any = {
+        smtp_enabled: input.smtpEnabled,
+        smtp_host: input.smtpHost || null,
+        smtp_port: input.smtpPort,
+        smtp_secure: input.smtpSecure,
+        smtp_username: input.smtpUsername || null,
+        smtp_from_email: input.smtpFromEmail || null,
+        smtp_from_name: input.smtpFromName || null,
+        sms_enabled: input.smsEnabled,
+        sms_provider: input.smsProvider,
+        sms_sign_name: input.smsSignName || null,
+        sms_template_code: input.smsTemplateCode || null,
+        sms_region: input.smsRegion || null,
+        sms_app_id: input.smsAppId || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (input.smtpPassword) {
+        if (!options.secretCrypto) {
+          throw new Error("Provider secret encryption is not configured.");
+        }
+        values.smtp_password_ciphertext = options.secretCrypto.encrypt(input.smtpPassword);
+      }
+      if (input.smsAccessKeyId) {
+        if (!options.secretCrypto) {
+          throw new Error("Provider secret encryption is not configured.");
+        }
+        values.sms_access_key_id_ciphertext = options.secretCrypto.encrypt(input.smsAccessKeyId);
+      }
+      if (input.smsAccessKeySecret) {
+        if (!options.secretCrypto) {
+          throw new Error("Provider secret encryption is not configured.");
+        }
+        values.sms_access_key_secret_ciphertext = options.secretCrypto.encrypt(input.smsAccessKeySecret);
+      }
+      const { error } = await client()
+        .from("platform_notification_settings")
+        .update(values)
+        .eq("id", "default");
+      if (error) throw error;
+      await audit(actor, "notification.settings.updated", "notification_settings", "default", {
+        smtpEnabled: input.smtpEnabled,
+        smsEnabled: input.smsEnabled,
+        smsProvider: input.smsProvider,
+        secretsChanged: {
+          smtpPassword: Boolean(input.smtpPassword),
+          smsAccessKeyId: Boolean(input.smsAccessKeyId),
+          smsAccessKeySecret: Boolean(input.smsAccessKeySecret),
+        },
+      });
+    },
     async updateProvider(actor: Actor, id: string, input: any) {
       const values: any = {
         base_url: input.baseUrl,

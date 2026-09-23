@@ -19,6 +19,7 @@ export async function isAdminSession(token: string): Promise<boolean> {
   }
 }
 export const fetchAdminProviders = (t:string) => request<any>(t,"/providers");
+export const fetchAdminNotificationSettings = (t:string) => request<any>(t,"/notifications");
 export const fetchAdminModels = (t:string) => request<any>(t,"/models");
 export const fetchAdminPlans = (t:string) => request<any>(t,"/plans");
 export const fetchAdminUsers = (t:string,offset=0,limit=50) => request<any>(t,`/users?offset=${offset}&limit=${limit}`);
@@ -30,6 +31,7 @@ export const createAdminCreditPack=(t:string,data:unknown)=>request<void>(t,"/cr
 export const updateAdminCreditPack=(t:string,id:string,data:unknown)=>request<void>(t,`/credit-packs/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
 export const deleteAdminCreditPack=(t:string,id:string)=>request<void>(t,`/credit-packs/${encodeURIComponent(id)}`,{method:"DELETE"});
 export const updateAdminProvider = (t:string,id:string,data:unknown) => request<void>(t,`/providers/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
+export const updateAdminNotificationSettings = (t:string,data:unknown) => request<void>(t,"/notifications",{method:"PATCH",body:JSON.stringify(data)});
 export const createAdminProvider = (t:string,data:unknown) => request<void>(t,"/providers",{method:"POST",body:JSON.stringify(data)});
 export const discoverAdminProviderModels = (t:string,id:string,data:unknown) => request<any>(t,`/providers/${encodeURIComponent(id)}/models/discover`,{method:"POST",body:JSON.stringify(data)});
 export const createAdminModel = (t:string,data:unknown) => request<void>(t,"/models",{method:"POST",body:JSON.stringify(data)});

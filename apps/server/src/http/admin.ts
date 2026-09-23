@@ -14,6 +14,24 @@ const providerDiscoverySchema = z.object({ baseUrl: z.string().url().refine((v) 
 const modelCreateSchema = z.object({ providerId: z.string().min(1), modelId: z.string().min(1), displayName: z.string().min(1), generationType: z.enum(generationTypes).default("image"), creditPrice: z.number().nonnegative(), costPriceFen: z.number().int().nonnegative().default(0), minimumPlan: z.enum(planIds).default("free"), enabled: z.boolean().default(true) });
 const creditRatioSchema=z.object({creditsPerYuan:z.number().int().positive()});
 const creditPackSchema=z.object({id:z.string().min(1).max(64).regex(/^[a-z0-9-]+$/),name:z.string().min(1).max(80),amountFen:z.number().int().positive(),bonusCredits:z.number().int().nonnegative(),lemonSqueezyVariantId:z.string().min(1),enabled:z.boolean()});
+const notificationSettingsSchema = z.object({
+  smtpEnabled: z.boolean(),
+  smtpHost: z.string().trim().max(255).default(""),
+  smtpPort: z.number().int().min(1).max(65535).default(587),
+  smtpSecure: z.boolean().default(true),
+  smtpUsername: z.string().trim().max(255).default(""),
+  smtpPassword: z.string().max(512).optional(),
+  smtpFromEmail: z.string().trim().max(255).default(""),
+  smtpFromName: z.string().trim().max(120).default(""),
+  smsEnabled: z.boolean(),
+  smsProvider: z.enum(["aliyun", "tencent", "twilio"]).default("aliyun"),
+  smsAccessKeyId: z.string().max(512).optional(),
+  smsAccessKeySecret: z.string().max(512).optional(),
+  smsSignName: z.string().trim().max(120).default(""),
+  smsTemplateCode: z.string().trim().max(120).default(""),
+  smsRegion: z.string().trim().max(120).default(""),
+  smsAppId: z.string().trim().max(120).default(""),
+});
 function parsePagination(query: any) { const offset = Number.parseInt(query?.offset, 10); const limit = Number.parseInt(query?.limit, 10); return { offset: Number.isInteger(offset) && offset >= 0 ? offset : 0, limit: Number.isInteger(limit) && limit > 0 && limit <= 200 ? limit : 50 }; }
 function isUniqueViolation(error: unknown) {
   return Boolean(error && typeof error === "object" && "code" in error && error.code === "23505");
@@ -29,6 +47,8 @@ export function registerAdminRoutes(app: FastifyInstance, options: { auth: Reque
   };
   app.get("/api/admin/overview", async (req, reply) => { if (!await guard(req,reply)) return; return { ...(await options.service.getOverview()) }; });
   app.get("/api/admin/providers", async (req, reply) => { if (!await guard(req,reply)) return; return { providers: await options.service.listProviders() }; });
+  app.get("/api/admin/notifications", async (req, reply) => { if (!await guard(req,reply)) return; return options.service.getNotificationSettings(); });
+  app.patch("/api/admin/notifications", async (req, reply) => { const actor=await guard(req,reply); if(!actor)return; const parsed=notificationSettingsSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"通知与验证配置无效"}}); await options.service.updateNotificationSettings(actor,parsed.data); return reply.code(204).send(); });
   app.post("/api/admin/providers", async (req, reply) => { const actor=await guard(req,reply); if(!actor)return; const parsed=providerCreateSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"供应商配置无效"}}); try { await options.service.createProvider(actor,parsed.data); } catch (error) { if (isUniqueViolation(error)) return reply.code(409).send({error:{code:"invalid_request",message:"供应商标识已存在"}}); throw error; } return reply.code(201).send(); });
   app.patch("/api/admin/providers/:id", async (req, reply) => { const actor=await guard(req,reply); if(!actor)return; const parsed=providerUpdateSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"Invalid provider settings"}}); await options.service.updateProvider(actor,(req.params as any).id,parsed.data); return reply.code(204).send(); });
   app.post("/api/admin/providers/:id/models/discover", async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;const parsed=providerDiscoverySchema.safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"Invalid provider discovery settings"}});return {models:await options.service.discoverProviderModels(actor,(req.params as any).id,parsed.data)};});

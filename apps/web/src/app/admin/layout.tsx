@@ -2,12 +2,13 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { BarChart3, Boxes, Coins, CreditCard, Database, KeyRound, Users } from "lucide-react";
+import { BarChart3, Boxes, Coins, CreditCard, Database, KeyRound, Mail, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 const nav = [
   ["/admin","概览",BarChart3], ["/admin/providers","供应商",KeyRound],
   ["/admin/models","模型定价",Boxes], ["/admin/plans","订阅套餐",CreditCard],
   ["/admin/credit-packs","积分充值",Coins],
+  ["/admin/notifications","通知与验证",Mail],
   ["/admin/users","用户余额",Users], ["/admin/orders","充值订单",Database], ["/admin/ledger","资金账本",Database],
 ] as const;
 export default function AdminLayout({children}:{children:ReactNode}) {

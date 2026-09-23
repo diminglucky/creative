@@ -12,6 +12,8 @@ function createApp(options?: { user?: { id: string; email?: string }; adminEmail
     }),
     listProviders: vi.fn().mockResolvedValue([]),
     createProvider: vi.fn().mockResolvedValue(undefined),
+    getNotificationSettings: vi.fn().mockResolvedValue({ smtpEnabled: false, smsEnabled: false }),
+    updateNotificationSettings: vi.fn().mockResolvedValue(undefined),
     updateProvider: vi.fn().mockResolvedValue(undefined),
     discoverProviderModels: vi.fn().mockResolvedValue([{ id: "gpt-image-1", ownedBy: "openai" }]),
     listModels: vi.fn().mockResolvedValue([]),

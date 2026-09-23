@@ -1282,6 +1282,69 @@ export type Database = {
           },
         ]
       }
+      platform_notification_settings: {
+        Row: {
+          id: string
+          sms_access_key_id_ciphertext: string | null
+          sms_access_key_secret_ciphertext: string | null
+          sms_app_id: string | null
+          sms_enabled: boolean
+          sms_provider: string
+          sms_region: string | null
+          sms_sign_name: string | null
+          sms_template_code: string | null
+          smtp_enabled: boolean
+          smtp_from_email: string | null
+          smtp_from_name: string | null
+          smtp_host: string | null
+          smtp_password_ciphertext: string | null
+          smtp_port: number
+          smtp_secure: boolean
+          smtp_username: string | null
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          sms_access_key_id_ciphertext?: string | null
+          sms_access_key_secret_ciphertext?: string | null
+          sms_app_id?: string | null
+          sms_enabled?: boolean
+          sms_provider?: string
+          sms_region?: string | null
+          sms_sign_name?: string | null
+          sms_template_code?: string | null
+          smtp_enabled?: boolean
+          smtp_from_email?: string | null
+          smtp_from_name?: string | null
+          smtp_host?: string | null
+          smtp_password_ciphertext?: string | null
+          smtp_port?: number
+          smtp_secure?: boolean
+          smtp_username?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          sms_access_key_id_ciphertext?: string | null
+          sms_access_key_secret_ciphertext?: string | null
+          sms_app_id?: string | null
+          sms_enabled?: boolean
+          sms_provider?: string
+          sms_region?: string | null
+          sms_sign_name?: string | null
+          sms_template_code?: string | null
+          smtp_enabled?: boolean
+          smtp_from_email?: string | null
+          smtp_from_name?: string | null
+          smtp_host?: string | null
+          smtp_password_ciphertext?: string | null
+          smtp_port?: number
+          smtp_secure?: boolean
+          smtp_username?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       platform_providers: {
         Row: {
           base_url: string
