@@ -1,6 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import type { AdminService } from "../features/admin/admin-service.js";
+import {
+  NotificationServiceError,
+  type NotificationService,
+} from "../features/notifications/notification-service.js";
 import type { RequestAuthenticator } from "../supabase/user.js";
 
 const providerUpdateSchema = z.object({ baseUrl: z.string().url().refine((v) => /^https?:\/\//i.test(v)), enabled: z.boolean(), secret: z.string().min(1).optional() });
@@ -32,12 +36,36 @@ const notificationSettingsSchema = z.object({
   smsRegion: z.string().trim().max(120).default(""),
   smsAppId: z.string().trim().max(120).default(""),
 });
+const notificationTestEmailSchema = z.object({ to: z.string().email() });
+const notificationTestSmsSchema = z.object({ phone: z.string().min(6).max(32) });
 function parsePagination(query: any) { const offset = Number.parseInt(query?.offset, 10); const limit = Number.parseInt(query?.limit, 10); return { offset: Number.isInteger(offset) && offset >= 0 ? offset : 0, limit: Number.isInteger(limit) && limit > 0 && limit <= 200 ? limit : 50 }; }
 function isUniqueViolation(error: unknown) {
   return Boolean(error && typeof error === "object" && "code" in error && error.code === "23505");
 }
+function sendNotificationError(error: unknown, reply: FastifyReply) {
+  if (error instanceof NotificationServiceError) {
+    const status =
+      error.code === "invalid_notification_settings"
+        ? 400
+        : error.code === "notification_not_configured"
+          ? 503
+          : 502;
+    return reply.code(status).send({
+      error: {
+        code:
+          error.code === "invalid_notification_settings"
+            ? "invalid_request"
+            : "application_error",
+        message: error.message,
+      },
+    });
+  }
+  return reply.code(500).send({
+    error: { code: "application_error", message: "通知服务异常" },
+  });
+}
 
-export function registerAdminRoutes(app: FastifyInstance, options: { auth: RequestAuthenticator; adminEmail?: string; service: AdminService }) {
+export function registerAdminRoutes(app: FastifyInstance, options: { auth: RequestAuthenticator; adminEmail?: string; service: AdminService; notificationService?: NotificationService }) {
   const guard = async (request: FastifyRequest, reply: FastifyReply) => {
     const user = await options.auth.authenticate(request);
     if (!user) { reply.code(401).send({ error: { code: "unauthorized", message: "Authentication required" } }); return null; }
@@ -48,7 +76,9 @@ export function registerAdminRoutes(app: FastifyInstance, options: { auth: Reque
   app.get("/api/admin/overview", async (req, reply) => { if (!await guard(req,reply)) return; return { ...(await options.service.getOverview()) }; });
   app.get("/api/admin/providers", async (req, reply) => { if (!await guard(req,reply)) return; return { providers: await options.service.listProviders() }; });
   app.get("/api/admin/notifications", async (req, reply) => { if (!await guard(req,reply)) return; return options.service.getNotificationSettings(); });
-  app.patch("/api/admin/notifications", async (req, reply) => { const actor=await guard(req,reply); if(!actor)return; const parsed=notificationSettingsSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"通知与验证配置无效"}}); await options.service.updateNotificationSettings(actor,parsed.data); return reply.code(204).send(); });
+  app.patch("/api/admin/notifications", async (req, reply) => { const actor=await guard(req,reply); if(!actor)return; const parsed=notificationSettingsSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"通知与验证配置无效"}}); try { await options.service.updateNotificationSettings(actor,parsed.data); } catch (error) { return sendNotificationError(error, reply); } return reply.code(204).send(); });
+  app.post("/api/admin/notifications/test-email", async (req, reply) => { if(!await guard(req,reply))return; const parsed=notificationTestEmailSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"测试邮箱格式无效"}}); try { await options.notificationService?.sendTestEmail(parsed.data.to); } catch (error) { return sendNotificationError(error, reply); } return reply.code(204).send(); });
+  app.post("/api/admin/notifications/test-sms", async (req, reply) => { if(!await guard(req,reply))return; const parsed=notificationTestSmsSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"测试手机号格式无效"}}); try { await options.notificationService?.sendTestSms(parsed.data.phone); } catch (error) { return sendNotificationError(error, reply); } return reply.code(204).send(); });
   app.post("/api/admin/providers", async (req, reply) => { const actor=await guard(req,reply); if(!actor)return; const parsed=providerCreateSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"供应商配置无效"}}); try { await options.service.createProvider(actor,parsed.data); } catch (error) { if (isUniqueViolation(error)) return reply.code(409).send({error:{code:"invalid_request",message:"供应商标识已存在"}}); throw error; } return reply.code(201).send(); });
   app.patch("/api/admin/providers/:id", async (req, reply) => { const actor=await guard(req,reply); if(!actor)return; const parsed=providerUpdateSchema.safeParse(req.body); if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"Invalid provider settings"}}); await options.service.updateProvider(actor,(req.params as any).id,parsed.data); return reply.code(204).send(); });
   app.post("/api/admin/providers/:id/models/discover", async(req,reply)=>{const actor=await guard(req,reply);if(!actor)return;const parsed=providerDiscoverySchema.safeParse(req.body);if(!parsed.success)return reply.code(400).send({error:{code:"invalid_request",message:"Invalid provider discovery settings"}});return {models:await options.service.discoverProviderModels(actor,(req.params as any).id,parsed.data)};});

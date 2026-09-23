@@ -91,7 +91,7 @@ async function loadPersonalWorkspace(
 async function loadProfile(admin: AdminSupabaseClient, userId: string) {
   const { data, error } = await admin
     .from("profiles")
-    .select("id, email, display_name, avatar_url")
+    .select("id, email, phone, display_name, avatar_url")
     .eq("id", userId)
     .single();
 
@@ -103,6 +103,7 @@ async function loadProfile(admin: AdminSupabaseClient, userId: string) {
     avatarUrl: data.avatar_url ?? null,
     displayName: data.display_name ?? "Personal",
     email: data.email ?? "",
+    phone: data.phone ?? null,
     id: data.id,
   } as const;
 }

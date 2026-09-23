@@ -72,6 +72,14 @@ import {
   type ImageModelCatalog,
 } from "./features/billing/image-model-catalog.js";
 import {
+  createNotificationService,
+  type NotificationService,
+} from "./features/notifications/notification-service.js";
+import {
+  createPhoneAuthService,
+  type PhoneAuthService,
+} from "./features/auth/phone-auth-service.js";
+import {
   createVideoModelCatalog,
   type VideoModelCatalog,
 } from "./features/billing/video-model-catalog.js";
@@ -86,6 +94,7 @@ import { registerAdminRoutes } from "./http/admin.js";
 import { registerPaymentWebhookRoute } from "./http/payments-webhook.js";
 import { registerCreditRoutes } from "./http/credits.js";
 import { registerPricingRoutes } from "./http/pricing.js";
+import { registerPhoneAuthRoutes } from "./http/auth-phone.js";
 import { registerFontsRoutes } from "./http/fonts.js";
 import { registerJobRoutes } from "./http/jobs.js";
 import { registerBrandKitRoutes } from "./http/brand-kits.js";
@@ -142,6 +151,8 @@ export type BuildAppOptions = {
   threadService?: ThreadService;
   viewerService?: ViewerService;
   dynamicImageService?: DynamicOpenAIImageService;
+  notificationService?: NotificationService;
+  phoneAuthService?: PhoneAuthService;
 };
 
 export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
@@ -184,6 +195,16 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const providerSecretCrypto = createProviderSecretCrypto(
     env.providerSecretsEncryptionKey,
   );
+  const notificationService =
+    options.notificationService ??
+    createNotificationService({ getAdminClient, secretCrypto: providerSecretCrypto });
+  const phoneAuthService =
+    options.phoneAuthService ??
+    createPhoneAuthService({
+      getAdminClient,
+      notificationService,
+      otpSecret: env.providerSecretsEncryptionKey ?? "creative-phone-otp",
+    });
   const projectService =
     options.projectService ??
     createProjectService({ createUserClient, viewerService });
@@ -219,7 +240,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   const creditService =
     options.creditService ?? createCreditService({ getAdminClient });
   const adminService =
-    options.adminService ?? createAdminService({ getAdminClient, secretCrypto: providerSecretCrypto });
+    options.adminService ??
+    createAdminService({
+      getAdminClient,
+      secretCrypto: providerSecretCrypto,
+      notificationService,
+    });
   const billingService =
     options.billingService ?? createBillingService({ getAdminClient });
   const dynamicImageService =
@@ -300,6 +326,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
     auth,
     ...(env.superAdminEmail ? { adminEmail: env.superAdminEmail } : {}),
     service: adminService,
+    notificationService,
   });
   registerWalletRoutes(app, { auth, viewerService, getAdminClient });
   void registerFontsRoutes(app, { env });
@@ -364,6 +391,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
   });
   void registerCreditRoutes(app, { auth, creditService, viewerService });
   void registerPricingRoutes(app, { auth, getAdminClient });
+  void registerPhoneAuthRoutes(app, { phoneAuthService });
   if (jobService) {
     void registerJobRoutes(app, { auth, billingService, creditService, jobService, tierGuard, viewerService });
   }

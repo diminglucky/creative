@@ -30,6 +30,8 @@ interface LoginFormProps {
 export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"magic" | "password">("password");
   const [loading, setLoading] = useState(false);
@@ -76,13 +78,16 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
   async function handlePassword(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const trimmed = email.trim();
-    if (!trimmed || !password) return;
+    const identifier = loginMethod === "phone" ? phone.trim() : trimmed;
+    if (!identifier || !password) return;
     setLoading(true);
     setError(null);
 
     const supabase = getSupabaseBrowserClient();
     const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: trimmed,
+      ...(loginMethod === "phone"
+        ? { phone: identifier }
+        : { email: identifier }),
       password,
     });
 
@@ -186,14 +191,52 @@ export function LoginForm({ initialErrorMessage = null }: LoginFormProps) {
               onSubmit={mode === "password" ? handlePassword : handleMagicLink}
               className="space-y-4"
             >
+              {mode === "password" && (
+                <div className="flex rounded-lg bg-muted p-1">
+                  {(["email", "phone"] as const).map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setLoginMethod(item)}
+                      className={`flex-1 rounded-md px-3 py-1.5 text-sm ${
+                        loginMethod === item
+                          ? "bg-background font-medium text-foreground shadow-sm"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {item === "email" ? "邮箱登录" : "手机号登录"}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">
+                  {mode === "password" && loginMethod === "phone"
+                    ? "手机号"
+                    : "Email"}
+                </Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type={
+                    mode === "password" && loginMethod === "phone"
+                      ? "tel"
+                      : "email"
+                  }
+                  placeholder={
+                    mode === "password" && loginMethod === "phone"
+                      ? "+8613800138000"
+                      : "you@example.com"
+                  }
+                  value={
+                    mode === "password" && loginMethod === "phone"
+                      ? phone
+                      : email
+                  }
+                  onChange={(e) =>
+                    mode === "password" && loginMethod === "phone"
+                      ? setPhone(e.target.value)
+                      : setEmail(e.target.value)
+                  }
                   required
                 />
               </div>

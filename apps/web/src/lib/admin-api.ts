@@ -32,6 +32,8 @@ export const updateAdminCreditPack=(t:string,id:string,data:unknown)=>request<vo
 export const deleteAdminCreditPack=(t:string,id:string)=>request<void>(t,`/credit-packs/${encodeURIComponent(id)}`,{method:"DELETE"});
 export const updateAdminProvider = (t:string,id:string,data:unknown) => request<void>(t,`/providers/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(data)});
 export const updateAdminNotificationSettings = (t:string,data:unknown) => request<void>(t,"/notifications",{method:"PATCH",body:JSON.stringify(data)});
+export const testAdminNotificationEmail = (t:string,to:string) => request<void>(t,"/notifications/test-email",{method:"POST",body:JSON.stringify({to})});
+export const testAdminNotificationSms = (t:string,phone:string) => request<void>(t,"/notifications/test-sms",{method:"POST",body:JSON.stringify({phone})});
 export const createAdminProvider = (t:string,data:unknown) => request<void>(t,"/providers",{method:"POST",body:JSON.stringify(data)});
 export const discoverAdminProviderModels = (t:string,id:string,data:unknown) => request<any>(t,`/providers/${encodeURIComponent(id)}/models/discover`,{method:"POST",body:JSON.stringify(data)});
 export const createAdminModel = (t:string,data:unknown) => request<void>(t,"/models",{method:"POST",body:JSON.stringify(data)});

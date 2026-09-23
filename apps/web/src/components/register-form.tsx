@@ -11,6 +11,7 @@ import { Label } from "./ui/label";
 import { Separator } from "./ui/separator";
 import { fetchViewer } from "../lib/server-api";
 import { getSupabaseBrowserClient } from "../lib/supabase-browser";
+import { registerPhone, sendPhoneCode } from "../lib/phone-auth-api";
 
 const stagger = {
   hidden: {},
@@ -25,6 +26,10 @@ const fadeIn = {
 export function RegisterForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [mode, setMode] = useState<"email" | "phone">("email");
+  const [countdown, setCountdown] = useState(0);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -43,6 +48,38 @@ export function RegisterForm() {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const trimmed = email.trim();
+    if (mode === "phone") {
+      if (!phone.trim() || !otp || !password) return;
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        await registerPhone({
+          phone: phone.trim(),
+          code: otp,
+          password,
+        });
+        const supabase = getSupabaseBrowserClient();
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
+          phone: phone.trim(),
+          password,
+        });
+        if (authError || !data.session?.access_token) {
+          setError(authError?.message ?? "手机号注册成功，但自动登录失败，请手动登录。");
+          return;
+        }
+        await bootstrapWorkspace(data.session.access_token);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "手机号注册失败");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!trimmed || !password) return;
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -76,6 +113,27 @@ export function RegisterForm() {
 
     setLoading(false);
     setSent(true);
+  }
+
+  async function handleSendCode() {
+    const trimmed = phone.trim();
+    if (!trimmed) return;
+    setError(null);
+    try {
+      await sendPhoneCode(trimmed);
+      setCountdown(60);
+      const timer = window.setInterval(() => {
+        setCountdown((value) => {
+          if (value <= 1) {
+            window.clearInterval(timer);
+            return 0;
+          }
+          return value - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "验证码发送失败");
+    }
   }
 
   return (
@@ -131,17 +189,71 @@ export function RegisterForm() {
             </motion.div>
 
             <motion.form variants={fadeIn} onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="register-email">Email</Label>
-                <Input
-                  id="register-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+              <div className="flex rounded-lg bg-muted p-1">
+                {(["email", "phone"] as const).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => {
+                      setMode(item);
+                      setError(null);
+                    }}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-sm ${
+                      mode === item
+                        ? "bg-background font-medium text-foreground shadow-sm"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {item === "email" ? "邮箱注册" : "手机号注册"}
+                  </button>
+                ))}
               </div>
+              {mode === "email" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="register-email">Email</Label>
+                  <Input
+                    id="register-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="register-phone">手机号</Label>
+                    <Input
+                      id="register-phone"
+                      placeholder="+8613800138000"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor="register-phone-code">验证码</Label>
+                      <Input
+                        id="register-phone-code"
+                        inputMode="numeric"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={countdown > 0 || !phone.trim()}
+                      onClick={handleSendCode}
+                    >
+                      {countdown > 0 ? `${countdown}s` : "发送验证码"}
+                    </Button>
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="register-password">Password</Label>
                 <Input

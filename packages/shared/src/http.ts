@@ -67,6 +67,7 @@ export const unauthenticatedErrorResponseSchema = z.object({
 });
 
 export const applicationErrorCodeSchema = z.enum([
+  "invalid_request",
   "application_error",
   "bootstrap_failed",
   "brand_kit_not_found",

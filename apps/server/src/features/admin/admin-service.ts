@@ -3,6 +3,7 @@ import { isIP } from "node:net";
 
 import type { AdminSupabaseClient } from "../../supabase/admin.js";
 import type { ProviderSecretCrypto } from "../../security/provider-secret-crypto.js";
+import type { NotificationService } from "../notifications/notification-service.js";
 
 type Actor = { id: string; email: string };
 
@@ -58,6 +59,7 @@ export type AdminService = ReturnType<typeof createAdminService>;
 export function createAdminService(options: {
   getAdminClient: () => AdminSupabaseClient;
   secretCrypto?: ProviderSecretCrypto;
+  notificationService?: NotificationService;
 }) {
   const client = () => options.getAdminClient() as any;
   const audit = async (
@@ -226,6 +228,16 @@ export function createAdminService(options: {
       };
     },
     async updateNotificationSettings(actor: Actor, input: any) {
+      const { data: existing } = await client()
+        .from("platform_notification_settings")
+        .select("sms_access_key_id_ciphertext,sms_access_key_secret_ciphertext")
+        .eq("id", "default")
+        .single();
+      options.notificationService?.assertSettingsValid({
+        ...input,
+        hasSmsAccessKeyId: Boolean(existing?.sms_access_key_id_ciphertext),
+        hasSmsAccessKeySecret: Boolean(existing?.sms_access_key_secret_ciphertext),
+      });
       const values: any = {
         smtp_enabled: input.smtpEnabled,
         smtp_host: input.smtpHost || null,

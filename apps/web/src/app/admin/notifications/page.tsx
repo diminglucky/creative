@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
 import {
   fetchAdminNotificationSettings,
+  testAdminNotificationEmail,
+  testAdminNotificationSms,
   updateAdminNotificationSettings,
 } from "@/lib/admin-api";
 
@@ -44,6 +46,9 @@ function NotificationSettingsForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [testPhone, setTestPhone] = useState("");
+  const [testing, setTesting] = useState<"email" | "sms" | null>(null);
 
   async function save() {
     setSaving(true);
@@ -63,6 +68,30 @@ function NotificationSettingsForm({
       setError(e instanceof Error ? e.message : "保存通知配置失败");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function sendTestEmail() {
+    setTesting("email");
+    setError("");
+    try {
+      await testAdminNotificationEmail(session!.access_token, testEmail);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "测试邮件发送失败");
+    } finally {
+      setTesting(null);
+    }
+  }
+
+  async function sendTestSms() {
+    setTesting("sms");
+    setError("");
+    try {
+      await testAdminNotificationSms(session!.access_token, testPhone);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "测试短信发送失败");
+    } finally {
+      setTesting(null);
     }
   }
 
@@ -155,6 +184,21 @@ function NotificationSettingsForm({
           />
           使用 SSL / TLS
         </label>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Input
+            className="max-w-72"
+            placeholder="测试收件邮箱"
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+          />
+          <Button
+            variant="outline"
+            disabled={testing === "email" || !testEmail}
+            onClick={sendTestEmail}
+          >
+            {testing === "email" ? "正在发送..." : "发送测试邮件"}
+          </Button>
+        </div>
       </section>
 
       <section className="rounded-md border bg-background p-4">
@@ -249,6 +293,21 @@ function NotificationSettingsForm({
               placeholder="腾讯云需要时填写"
             />
           </label>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Input
+            className="max-w-72"
+            placeholder="测试手机号，带国家码，例如 +8613800138000"
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+          />
+          <Button
+            variant="outline"
+            disabled={testing === "sms" || !testPhone}
+            onClick={sendTestSms}
+          >
+            {testing === "sms" ? "正在发送..." : "发送测试短信"}
+          </Button>
         </div>
       </section>
 

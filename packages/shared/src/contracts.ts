@@ -93,7 +93,8 @@ export const runCreateResponseSchema = z.object({
 
 export const viewerProfileSchema = z.object({
   id: userIdSchema,
-  email: z.string().email(),
+  email: z.string().email().or(z.literal("")),
+  phone: z.string().min(6).nullable().optional(),
   displayName: z.string().min(1),
   avatarUrl: z.string().url().nullable().optional(),
 });

@@ -3,6 +3,7 @@ packages:
   - packages/*
 
 allowBuilds:
+  '@alicloud/openapi-core': true
   '@biomejs/biome': true
   esbuild: true
   msw: false
@@ -14,5 +15,6 @@ ignoredBuiltDependencies:
   - msw
 
 onlyBuiltDependencies:
+  - '@alicloud/openapi-core'
   - esbuild
   - sharp
